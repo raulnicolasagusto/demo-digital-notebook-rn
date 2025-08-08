@@ -1,10 +1,12 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TextInput, Button, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
-import CustomInput from './src/components/CustomeInput';
+import { StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import CustomInput from './src/components/CustomInput';
+import CustomButton from './src/components/CustomButton';
 
 export default function App() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
+
       {/* <Text style={styles.title}>Sign in!</Text>
       <TextInput autoComplete='email' keyboardType="email-address" autoCapitalize="none" placeholder="Email" style={styles.input} />
       <TextInput keyboardType="default" autoCapitalize="none" placeholder="Password" style={styles.input} secureTextEntry /> */}
@@ -12,9 +14,7 @@ export default function App() {
       <CustomInput autoComplete='email' keyboardType="email-address" autoCapitalize="none" placeholder="Email"/>
       <CustomInput autoComplete='password' keyboardType="default" autoCapitalize="none" placeholder="Password" secureTextEntry/>
 
-      <Pressable style={styles.button} onPress={() => {console.log('Sign in pressed')}}>
-        <Text style={styles.buttonText}>Sign in</Text>
-      </Pressable>
+      <CustomButton text="Sign in" onPress={() => {console.log('Sign in pressed')}}/>
 
       <StatusBar style="auto" />
     </KeyboardAvoidingView>
