@@ -1,12 +1,16 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, TextInput, Button, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import CustomInput from './src/components/CustomeInput';
 
 export default function App() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
-      <Text style={styles.title}>Sign in!</Text>
+      {/* <Text style={styles.title}>Sign in!</Text>
       <TextInput autoComplete='email' keyboardType="email-address" autoCapitalize="none" placeholder="Email" style={styles.input} />
-      <TextInput keyboardType="default" autoCapitalize="none" placeholder="Password" style={styles.input} secureTextEntry />
+      <TextInput keyboardType="default" autoCapitalize="none" placeholder="Password" style={styles.input} secureTextEntry /> */}
+
+      <CustomInput autoComplete='email' keyboardType="email-address" autoCapitalize="none" placeholder="Email"/>
+      <CustomInput autoComplete='password' keyboardType="default" autoCapitalize="none" placeholder="Password" secureTextEntry/>
 
       <Pressable style={styles.button} onPress={() => {console.log('Sign in pressed')}}>
         <Text style={styles.buttonText}>Sign in</Text>
@@ -20,18 +24,11 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'gray',
+    backgroundColor: '#fff',
     justifyContent: 'center',
     padding: 20,
   },
-  input: {
-    width: '100%',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    marginVertical: 8,
-  },
+
   title: {
     fontSize: 24,
     fontWeight: '600',
