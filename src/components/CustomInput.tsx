@@ -25,7 +25,7 @@ export default function CustomInput<T extends FieldValues>({ control, name, rule
               onBlur={onBlur}
               value={value}
             />
-            <Text style={styles.error}>{error?.message}</Text>
+            {error && <Text style={styles.error}>{error.message}</Text>}
           </View>
         )}
       />
