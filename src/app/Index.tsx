@@ -1,10 +1,15 @@
-import { View, Text, StyleSheet} from 'react-native'
+import { View, Text, StyleSheet, Button} from 'react-native'
 import { Link } from 'expo-router'
+import { useAuth } from '@/providers/AuthProvider';
 
-export default function Index() {
+export default function WelcomeScreen() {
+  const { isAuthenticated, signIn, signOut } = useAuth();
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Bienvenido a la app!</Text>
+
+      <Text>{isAuthenticated ? "Estás autenticado" : "No estás autenticado"}</Text>
+      <Button title='Sign out' onPress={signOut} />
 
       <Link style={styles.link} href="/sign-in"> Go to Sign In</Link>
       <Link style={styles.link} href="/sign-up"> Go to Sign Up</Link>
