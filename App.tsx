@@ -43,17 +43,17 @@ export default function SignIn() {
 
       <View style={styles.form}>
         <CustomInput
-        control={control}
-        name="email"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        placeholder="Email"
+          control={control}
+          name="email"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          placeholder="Email"
         />
 
         <CustomInput
-        control={control}
-        name="password"
-        autoComplete='password'
+          control={control}
+          name="password"
+          autoComplete='password'
         keyboardType="default"
         autoCapitalize="none"
         placeholder="Password"
