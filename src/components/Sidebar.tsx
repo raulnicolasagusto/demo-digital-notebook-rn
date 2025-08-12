@@ -18,6 +18,9 @@ import {
   Moon,
   Sun,
   Menu,
+  BookOpen,
+  Target,
+  Book,
 } from 'lucide-react-native';
 
 interface SidebarProps {
@@ -106,6 +109,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
         {/* Menu Items */}
         <View style={styles.menu}>
           <TouchableOpacity style={styles.menuItem}>
+            <BookOpen size={20} color="#6B7280" />
+            <Animated.Text style={[styles.menuText, { opacity: contentOpacity }]}>
+              Mis Cuadernos
+            </Animated.Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.menuItem}>
             <FileText size={20} color="#6B7280" />
             <Animated.Text style={[styles.menuText, { opacity: contentOpacity }]}>
               Mis Notas
@@ -113,9 +123,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.menuItem}>
-            <Search size={20} color="#6B7280" />
+            <Target size={20} color="#6B7280" />
             <Animated.Text style={[styles.menuText, { opacity: contentOpacity }]}>
-              Buscar
+              Productividad
+            </Animated.Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.menuItem}>
+            <Book size={20} color="#6B7280" />
+            <Animated.Text style={[styles.menuText, { opacity: contentOpacity }]}>
+              Lecturas
             </Animated.Text>
           </TouchableOpacity>
           
