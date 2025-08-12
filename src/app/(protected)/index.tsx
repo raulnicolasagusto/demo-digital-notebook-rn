@@ -31,7 +31,7 @@ export default function HomeScreen() {
                 return (
                     <View style={styles.content}>
                         <View style={styles.contentHeader}>
-                            <Text style={styles.contentTitle}>Mis Cuadernos</Text>
+
                             <TouchableOpacity style={styles.addButton}>
                                 <Plus size={20} color="#FFFFFF" />
                                 <Text style={styles.addButtonText}>Nuevo Cuaderno</Text>

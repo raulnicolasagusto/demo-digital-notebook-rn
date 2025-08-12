@@ -66,16 +66,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
 
   const animatedStyle = {
     width: animatedWidth,
+    opacity: contentOpacity,
   };
-
-  // Si no está expandido, no renderizar nada
-  if (!isExpanded) {
-    return null;
-  }
 
   return (
     <>
-      {isMobile && (
+      {isExpanded && isMobile && (
         <TouchableOpacity 
           style={styles.overlay}
           onPress={() => setIsExpanded(false)}
@@ -172,6 +168,9 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   sidebar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
     backgroundColor: '#FFFFFF',
     paddingTop: 60,
     paddingHorizontal: 16,
