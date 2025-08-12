@@ -6,7 +6,7 @@ import CustomButton from '@/components/CustomButton';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, router } from 'expo-router';
-import { useSignIn } from '@clerk/clerk-expo';
+import { isClerkAPIResponseError, useSignIn } from '@clerk/clerk-expo';
 
 
 
@@ -19,10 +19,15 @@ const signInSchema = z.object({
 //con esta linea podemos agregar el type a la funcion signIn
 type SignInField = z.infer<typeof signInSchema>;
 
+const clerkErrorToFormField = {
+  'identifier': 'email',
+  'password': 'password'
+}
+
 
 export default function SignIn() {
 
-  const { control, handleSubmit, formState: { errors } } = useForm({
+  const { control, handleSubmit, formState: { errors }, setError } = useForm({
     mode: 'onBlur', // Esto hará que la validación se dispare cuando el usuario pierda el foco
     resolver: zodResolver(signInSchema)
   });
@@ -44,18 +49,41 @@ export default function SignIn() {
           setActive({ session: signInAttempt.createdSessionId });
         }else{
           console.log('Sign in failed', signInAttempt);
+          }
+
+        }catch (error) {
+          console.log('Error signing in', error);
+         if (isClerkAPIResponseError(error)) {
+             // Traducir mensajes específicos de Clerk al español
+             const errorCode = error.errors[0]?.code;
+             const paramName = error.errors[0]?.meta?.paramName || 'identifier';
+             
+             let spanishMessage = '';
+             
+             switch (errorCode) {
+               case 'form_identifier_not_found':
+                 spanishMessage = 'Email no encontrado. Verifica tu dirección de correo.';
+                 break;
+               case 'form_password_incorrect':
+                 spanishMessage = 'Contraseña incorrecta. Inténtalo de nuevo.';
+                 break;
+               case 'form_identifier_exists':
+                 spanishMessage = 'Este email ya está registrado.';
+                 break;
+               default:
+                 spanishMessage = error.errors[0]?.longMessage || 'Error de autenticación.';
+             }
+             
+             const fieldName = clerkErrorToFormField[paramName as keyof typeof clerkErrorToFormField] || 'email';
+             setError(fieldName as 'email' | 'password', { message: spanishMessage });
+         } else {
+             setError('email', { message: 'Algo salió mal. Inténtalo de nuevo.' });
+         }
         }
-
-        
-
-
-      }catch (error) {
-        console.log('Error signing in', error);
-      }
     
 
     
-    };
+  };
   
 
   

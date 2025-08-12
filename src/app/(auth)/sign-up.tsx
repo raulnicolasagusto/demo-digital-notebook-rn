@@ -6,7 +6,7 @@ import CustomButton from '@/components/CustomButton';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, router } from 'expo-router';
-import { useSignUp } from '@clerk/clerk-expo';
+import { useSignUp, isClerkAPIResponseError } from '@clerk/clerk-expo';
 
 
 
@@ -18,10 +18,14 @@ const signUpSchema = z.object({
 //con esta linea podemos agregar el type a la funcion signIn
 type SignUpField = z.infer<typeof signUpSchema>;
 
+const clerkErrorToFormField = {
+  'identifier': 'email',
+  'password': 'password'
+}
 
 export default function SignUp() {
 
-  const { control, handleSubmit, formState: { errors } } = useForm({
+  const { control, handleSubmit, setError, formState: { errors } } = useForm({
     mode: 'onBlur', // Esto hará que la validación se dispare cuando el usuario pierda el foco
     resolver: zodResolver(signUpSchema)
   });
@@ -40,9 +44,44 @@ export default function SignUp() {
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
 
       router.push('/verify'); // Redirigir a la página de verificación
-      
+
     } catch (error) {
       console.log('Sign up error:', error);
+       if (isClerkAPIResponseError(error)) {
+             // Traducir mensajes específicos de Clerk al español para sign-up
+             const errorCode = error.errors[0]?.code;
+             const paramName = error.errors[0]?.meta?.paramName || 'identifier';
+             
+             let spanishMessage = '';
+             
+             switch (errorCode) {
+               case 'form_identifier_exists':
+                 spanishMessage = 'Este email ya está registrado. Intenta con otro email.';
+                 break;
+               case 'form_password_pwned':
+                 spanishMessage = 'Esta contraseña ha sido comprometida. Elige una más segura.';
+                 break;
+               case 'form_password_too_common':
+                 spanishMessage = 'Esta contraseña es muy común. Elige una más segura.';
+                 break;
+               case 'form_password_length_too_short':
+                 spanishMessage = 'La contraseña debe tener al menos 8 caracteres.';
+                 break;
+               case 'form_identifier_invalid':
+                 spanishMessage = 'Email inválido. Verifica el formato de tu email.';
+                 break;
+               case 'form_password_validation_failed':
+                 spanishMessage = 'La contraseña no cumple con los requisitos de seguridad.';
+                 break;
+               default:
+                 spanishMessage = error.errors[0]?.longMessage || 'Error al crear la cuenta.';
+             }
+             
+             const fieldName = clerkErrorToFormField[paramName as keyof typeof clerkErrorToFormField] || 'email';
+             setError(fieldName as 'email' | 'password', { message: spanishMessage });
+         } else {
+             setError('email', { message: 'Error al crear la cuenta. Inténtalo de nuevo.' });
+         }
     }
 
     console.log('Sign up', data.email, data.password);
