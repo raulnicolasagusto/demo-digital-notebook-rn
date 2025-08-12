@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, router } from 'expo-router';
 import { isClerkAPIResponseError, useSignIn } from '@clerk/clerk-expo';
+import SignInWith from '@/components/SignInWith';
 
 
 
@@ -120,6 +121,8 @@ export default function SignIn() {
       <CustomButton text="Sign in" onPress={handleSubmit(onSignIn)}/>
 
       <Link style={styles.link} href="/sign-up"> No tienes cuenta? Registrate</Link>
+
+      <SignInWith />
 
       <StatusBar style="auto" />
     </KeyboardAvoidingView>
