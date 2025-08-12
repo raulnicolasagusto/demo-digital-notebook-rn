@@ -30,24 +30,26 @@ export default function HomeScreen() {
             case 'notebooks':
                 return (
                     <View style={styles.content}>
-                        <View style={styles.contentHeader}>
-
-                            <TouchableOpacity style={styles.addButton}>
-                                <Plus size={20} color="#FFFFFF" />
-                                <Text style={styles.addButtonText}>Nuevo Cuaderno</Text>
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity style={styles.createButton}>
+                            <Text style={styles.createButtonText}>Crear Cuaderno</Text>
+                        </TouchableOpacity>
                         
-                        <View style={styles.searchContainer}>
-                            <Search size={20} color="#6B7280" />
-                            <Text style={styles.searchPlaceholder}>Buscar cuadernos...</Text>
-                        </View>
-
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyStateTitle}>¡Comienza tu primer cuaderno!</Text>
-                            <Text style={styles.emptyStateText}>
-                                Crea tu primer cuaderno digital y comienza a organizar tus ideas.
-                            </Text>
+                        <View style={styles.notebooksGrid}>
+                            <TouchableOpacity style={styles.notebookCard} activeOpacity={0.8}>
+                                <View style={styles.notebookImage}>
+                                    {/* Placeholder para imagen */}
+                                </View>
+                                <Text style={styles.notebookTitle}>Ideas Iniciales</Text>
+                                <Text style={styles.notebookSubtitle}>Primeras notas y bocetos para ...</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity style={styles.notebookCard} activeOpacity={0.8}>
+                                <View style={styles.notebookImage}>
+                                    {/* Placeholder para imagen */}
+                                </View>
+                                <Text style={styles.notebookTitle}>Recetas de Cocina</Text>
+                                <Text style={styles.notebookSubtitle}>Mis recetas favoritas y por ...</Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
                 );
@@ -182,5 +184,54 @@ const styles = StyleSheet.create({
         color: '#6B7280',
         textAlign: 'center',
         marginTop: 40,
+    },
+    createButton: {
+        backgroundColor: '#6D28D9', // --color-accent del archivo base-colores.md
+        paddingVertical: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    createButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    notebooksGrid: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    notebookCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 16,
+        flex: 1,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+        transform: [{ scale: 1 }],
+    },
+    notebookImage: {
+        height: 120,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 8,
+        marginBottom: 12,
+    },
+    notebookTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1F2937',
+        marginBottom: 4,
+    },
+    notebookSubtitle: {
+        fontSize: 14,
+        color: '#6B7280',
+        lineHeight: 20,
     },
 });
