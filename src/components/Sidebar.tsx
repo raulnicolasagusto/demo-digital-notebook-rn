@@ -1,0 +1,272 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  Switch,
+  useWindowDimensions,
+} from 'react-native';
+import { useUser, useClerk } from '@clerk/clerk-expo';
+import {
+  FileText,
+  Search,
+  Settings,
+  LogOut,
+  User,
+  Moon,
+  Sun,
+  Menu,
+} from 'lucide-react-native';
+
+interface SidebarProps {
+  isExpanded: boolean;
+  setIsExpanded: (expanded: boolean) => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) => {
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const { width } = useWindowDimensions();
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Animation values
+  const animatedWidth = React.useRef(new Animated.Value(isExpanded ? 280 : 0)).current;
+  const contentOpacity = React.useRef(new Animated.Value(isExpanded ? 1 : 0)).current;
+
+  // Mobile breakpoint
+  const isMobile = width < 768;
+
+  useEffect(() => {
+    const targetWidth = isExpanded ? (isMobile ? width * 0.8 : 280) : 0;
+    
+    Animated.parallel([
+      Animated.spring(animatedWidth, {
+        toValue: targetWidth,
+        useNativeDriver: false,
+        tension: 50,  // Lower tension for slower animation
+        friction: 12, // Higher friction for slower animation
+      }),
+      Animated.timing(contentOpacity, {
+        toValue: isExpanded ? 1 : 0,
+        duration: isExpanded ? 300 : 200,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [isExpanded, width, isMobile]);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  const animatedStyle = {
+    width: animatedWidth,
+  };
+
+  // Si no está expandido, no renderizar nada
+  if (!isExpanded) {
+    return null;
+  }
+
+  return (
+    <>
+      {isMobile && (
+        <TouchableOpacity 
+          style={styles.overlay}
+          onPress={() => setIsExpanded(false)}
+          activeOpacity={1}
+        />
+      )}
+      
+      <Animated.View style={[styles.sidebar, animatedStyle]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={() => setIsExpanded(!isExpanded)}
+            style={styles.toggleButton}
+          >
+            <Menu size={24} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
+
+        {/* User Profile */}
+        <View style={styles.userProfile}>
+          <View style={styles.avatar}>
+            <User size={24} color="#6B7280" />
+          </View>
+          <Animated.View style={[styles.userInfo, { opacity: contentOpacity }]}>
+            <Text style={styles.userName}>
+              {user?.firstName} {user?.lastName}
+            </Text>
+            <Text style={styles.userEmail}>{user?.emailAddresses[0]?.emailAddress}</Text>
+          </Animated.View>
+        </View>
+
+        {/* Menu Items */}
+        <View style={styles.menu}>
+          <TouchableOpacity style={styles.menuItem}>
+            <FileText size={20} color="#6B7280" />
+            <Animated.Text style={[styles.menuText, { opacity: contentOpacity }]}>
+              Mis Notas
+            </Animated.Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.menuItem}>
+            <Search size={20} color="#6B7280" />
+            <Animated.Text style={[styles.menuText, { opacity: contentOpacity }]}>
+              Buscar
+            </Animated.Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.menuItem}>
+            <Settings size={20} color="#6B7280" />
+            <Animated.Text style={[styles.menuText, { opacity: contentOpacity }]}>
+              Configuración
+            </Animated.Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Dark Mode Toggle */}
+        <Animated.View style={[styles.darkModeToggle, { opacity: contentOpacity }]}>
+          <View style={styles.darkModeLabel}>
+            {isDarkMode ? (
+              <Moon size={18} color="#6B7280" />
+            ) : (
+              <Sun size={18} color="#6B7280" />
+            )}
+            <Text style={styles.darkModeText}>Modo oscuro</Text>
+          </View>
+          <Switch
+            value={isDarkMode}
+            onValueChange={setIsDarkMode}
+            trackColor={{ false: '#E5E7EB', true: '#6D28D9' }}
+            thumbColor={isDarkMode ? '#FFFFFF' : '#FFFFFF'}
+          />
+        </Animated.View>
+
+        {/* Sign Out */}
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <LogOut size={20} color="#6B7280" />
+          <Animated.Text style={[styles.signOutText, { opacity: contentOpacity }]}>
+            Salir
+          </Animated.Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </>
+  );
+};
+
+const styles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 1000,
+  },
+  sidebar: {
+    backgroundColor: '#FFFFFF',
+    paddingTop: 60,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 2,
+      height: 0,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 1001,
+    overflow: 'hidden',
+    height: '100%',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 20,
+  },
+  toggleButton: {
+    padding: 8,
+  },
+  userProfile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  menu: {
+    flex: 1,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  menuText: {
+    fontSize: 16,
+    color: '#374151',
+    marginLeft: 12,
+  },
+  darkModeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    marginBottom: 20,
+  },
+  darkModeLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  darkModeText: {
+    fontSize: 16,
+    color: '#374151',
+    marginLeft: 8,
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: '#FEF2F2',
+  },
+  signOutText: {
+    fontSize: 16,
+    color: '#DC2626',
+    marginLeft: 12,
+  },
+});
