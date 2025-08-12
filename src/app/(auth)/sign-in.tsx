@@ -6,7 +6,7 @@ import CustomButton from '@/components/CustomButton';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, router } from 'expo-router';
-import { useAuth } from '@/providers/AuthProvider';
+
 
 
 
@@ -27,12 +27,10 @@ export default function SignIn() {
   });
 
 
-const { signIn } = useAuth();
-
   const onSignIn = (data: SignInField) => {
     //Manual validation
     console.log('Sign in', data.email, data.password);
-    signIn();
+    
     router.replace('/');
   };
 

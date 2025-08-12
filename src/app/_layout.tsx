@@ -1,14 +1,11 @@
-import { Slot, Stack } from "expo-router";
-import { AuthProvider } from "../providers/AuthProvider";
+import { Slot } from "expo-router";
+import { ClerkProvider } from '@clerk/clerk-expo'
+import { tokenCache } from '@clerk/clerk-expo/token-cache'
 
 export default function Rootlayout(){
   return (
-    <AuthProvider>
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(protected)" options={{ headerShown: false }} />
-      </Stack>
-    </AuthProvider>
+      <ClerkProvider tokenCache={tokenCache}>
+        <Slot />
+      </ClerkProvider>
   );
 }

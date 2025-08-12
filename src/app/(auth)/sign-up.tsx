@@ -6,6 +6,7 @@ import CustomButton from '@/components/CustomButton';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'expo-router';
+import { useSignUp } from '@clerk/clerk-expo';
 
 
 
@@ -25,12 +26,25 @@ export default function SignUp() {
     resolver: zodResolver(signUpSchema)
   });
 
-  const onSignUp = (data: SignUpField) => {
-    //Manual validation
+  const { signUp, isLoaded } = useSignUp();
+
+  const onSignUp = async (data: SignUpField) => {
+    if (!isLoaded) return;
+
+    try {
+       await signUp.create({
+        emailAddress: data.email,
+        password: data.password
+      });
+    } catch (error) {
+      console.log('Sign up error:', error);
+    }
+
     console.log('Sign up', data.email, data.password);
+   
   };
 
-  
+ 
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
@@ -110,3 +124,4 @@ const styles = StyleSheet.create({
 
 });
 
+// 2:48:00
