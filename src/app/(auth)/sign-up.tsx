@@ -5,7 +5,7 @@ import CustomInput from '@/components/CustomInput';
 import CustomButton from '@/components/CustomButton';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useSignUp } from '@clerk/clerk-expo';
 
 
@@ -36,6 +36,11 @@ export default function SignUp() {
         emailAddress: data.email,
         password: data.password
       });
+
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+
+      router.push('/verify'); // Redirigir a la página de verificación
+      
     } catch (error) {
       console.log('Sign up error:', error);
     }
