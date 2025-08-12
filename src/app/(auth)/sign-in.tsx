@@ -6,6 +6,7 @@ import CustomButton from '@/components/CustomButton';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, router } from 'expo-router';
+import { useSignIn } from '@clerk/clerk-expo';
 
 
 
@@ -27,12 +28,35 @@ export default function SignIn() {
   });
 
 
-  const onSignIn = (data: SignInField) => {
+
+  const { signIn, isLoaded, setActive } = useSignIn();
+
+  const onSignIn = async (data: SignInField) => {
     //Manual validation
-    console.log('Sign in', data.email, data.password);
+    if(!isLoaded) return;
+
+      try{
+
+        const signInAttempt = await signIn.create({identifier: data.email, password: data.password});
+
+        if (signInAttempt.status === 'complete') {
+          // Sign in was successful, redirect to the home page or wherever you want
+          setActive({ session: signInAttempt.createdSessionId });
+        }else{
+          console.log('Sign in failed', signInAttempt);
+        }
+
+        
+
+
+      }catch (error) {
+        console.log('Error signing in', error);
+      }
     
-    router.replace('/');
-  };
+
+    
+    };
+  
 
   
 
