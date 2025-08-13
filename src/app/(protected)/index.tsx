@@ -4,9 +4,11 @@ import { useUser } from '@clerk/clerk-expo';
 import { Plus, Search } from 'lucide-react-native';
 import { Sidebar } from '@/components/Sidebar';
 import Header from '@/components/Header';
+import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
     const { user } = useUser();
+    const router = useRouter();
     const [activeSection, setActiveSection] = useState('notebooks');
     const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
     const { width } = useWindowDimensions();
@@ -35,7 +37,11 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                         
                         <View style={styles.notebooksGrid}>
-                            <TouchableOpacity style={styles.notebookCard} activeOpacity={0.8}>
+                            <TouchableOpacity 
+                                style={styles.notebookCard} 
+                                activeOpacity={0.8}
+                                onPress={() => router.push('/notebook/1')}
+                            >
                                 <View style={styles.notebookImage}>
                                     {/* Placeholder para imagen */}
                                 </View>
@@ -43,7 +49,11 @@ export default function HomeScreen() {
                                 <Text style={styles.notebookSubtitle}>Primeras notas y bocetos para ...</Text>
                             </TouchableOpacity>
                             
-                            <TouchableOpacity style={styles.notebookCard} activeOpacity={0.8}>
+                            <TouchableOpacity 
+                                style={styles.notebookCard} 
+                                activeOpacity={0.8}
+                                onPress={() => router.push('/notebook/2')}
+                            >
                                 <View style={styles.notebookImage}>
                                     {/* Placeholder para imagen */}
                                 </View>
