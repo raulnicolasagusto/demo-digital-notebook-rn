@@ -29,8 +29,14 @@ export default function NotebookScreen() {
 
   const screenData = Dimensions.get('window');
 
+  // Debug effect
+  React.useEffect(() => {
+    console.log('Paths array cambió:', paths.length, 'paths');
+  }, [paths]);
+
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: () => !isTextMode,
+    onStartShouldSetPanResponder: () => !isTextMode,
     onPanResponderGrant: (evt) => {
       if (!isTextMode) {
         const { locationX, locationY } = evt.nativeEvent;
@@ -49,8 +55,17 @@ export default function NotebookScreen() {
       }
     },
     onPanResponderRelease: () => {
-      if (!isTextMode && isDrawing) {
-        setPaths(prev => [...prev, { path: pathRef.current, color: '#000000' }]);
+      if (!isTextMode && isDrawing && pathRef.current) {
+        // Guardar el path actual antes de resetear
+        const completedPath = pathRef.current;
+        console.log('Guardando path:', completedPath);
+        setPaths(prev => {
+          const newPaths = [...prev, { path: completedPath, color: '#000000' }];
+          console.log('Nuevo array de paths:', newPaths);
+          return newPaths;
+        });
+        
+        // Resetear estado inmediatamente
         setCurrentPath('');
         setIsDrawing(false);
         pathRef.current = '';
