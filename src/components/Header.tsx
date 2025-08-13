@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Menu } from 'lucide-react-native';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface HeaderProps {
   title: string;
@@ -8,13 +9,15 @@ interface HeaderProps {
 }
 
 export default function Header({ title, onMenuPress }: HeaderProps) {
+  const { colors } = useTheme();
+  
   return (
-    <View style={styles.header}>
-      <TouchableOpacity style={styles.menuButton} onPress={onMenuPress}>
-        <Menu size={24} color="#1F2937" />
+    <View style={[styles.header, { backgroundColor: colors.surface }]}>
+      <TouchableOpacity style={[styles.menuButton, { backgroundColor: colors.background }]} onPress={onMenuPress}>
+        <Menu size={24} color={colors.text} />
       </TouchableOpacity>
       
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       
       <View style={styles.spacer} />
     </View>
@@ -25,7 +28,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 12,
     paddingTop: 60, // Para el safe area
@@ -43,14 +45,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1F2937',
     marginLeft: 16,
     flex: 1,
   },

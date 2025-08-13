@@ -5,10 +5,12 @@ import { Plus, Search } from 'lucide-react-native';
 import { Sidebar } from '@/components/Sidebar';
 import Header from '@/components/Header';
 import { useRouter } from 'expo-router';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function HomeScreen() {
     const { user } = useUser();
     const router = useRouter();
+    const { colors } = useTheme();
     const [activeSection, setActiveSection] = useState('notebooks');
     const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
     const { width } = useWindowDimensions();
@@ -32,33 +34,33 @@ export default function HomeScreen() {
             case 'notebooks':
                 return (
                     <View style={styles.content}>
-                        <TouchableOpacity style={styles.createButton}>
+                        <TouchableOpacity style={[styles.createButton, { backgroundColor: colors.accent }]}>
                             <Text style={styles.createButtonText}>Crear Cuaderno</Text>
                         </TouchableOpacity>
                         
                         <View style={styles.notebooksGrid}>
                             <TouchableOpacity 
-                                style={styles.notebookCard} 
+                                style={[styles.notebookCard, { backgroundColor: colors.surface }]} 
                                 activeOpacity={0.8}
                                 onPress={() => router.push('/notebook/1')}
                             >
-                                <View style={styles.notebookImage}>
+                                <View style={[styles.notebookImage, { backgroundColor: colors.background }]}>
                                     {/* Placeholder para imagen */}
                                 </View>
-                                <Text style={styles.notebookTitle}>Ideas Iniciales</Text>
-                                <Text style={styles.notebookSubtitle}>Primeras notas y bocetos para ...</Text>
+                                <Text style={[styles.notebookTitle, { color: colors.text }]}>Ideas Iniciales</Text>
+                                <Text style={[styles.notebookSubtitle, { color: colors.textSecondary }]}>Primeras notas y bocetos para ...</Text>
                             </TouchableOpacity>
                             
                             <TouchableOpacity 
-                                style={styles.notebookCard} 
+                                style={[styles.notebookCard, { backgroundColor: colors.surface }]} 
                                 activeOpacity={0.8}
                                 onPress={() => router.push('/notebook/2')}
                             >
-                                <View style={styles.notebookImage}>
+                                <View style={[styles.notebookImage, { backgroundColor: colors.background }]}>
                                     {/* Placeholder para imagen */}
                                 </View>
-                                <Text style={styles.notebookTitle}>Recetas de Cocina</Text>
-                                <Text style={styles.notebookSubtitle}>Mis recetas favoritas y por ...</Text>
+                                <Text style={[styles.notebookTitle, { color: colors.text }]}>Recetas de Cocina</Text>
+                                <Text style={[styles.notebookSubtitle, { color: colors.textSecondary }]}>Mis recetas favoritas y por ...</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -66,20 +68,20 @@ export default function HomeScreen() {
             default:
                 return (
                     <View style={styles.content}>
-                        <Text style={styles.contentTitle}>
+                        <Text style={[styles.contentTitle, { color: colors.text }]}>
                             {activeSection === 'notes' && 'Mis Notas'}
                             {activeSection === 'productivity' && 'Productividad'}
                             {activeSection === 'readings' && 'Lecturas'}
                             {activeSection === 'settings' && 'Configuración'}
                         </Text>
-                        <Text style={styles.comingSoon}>Próximamente...</Text>
+                        <Text style={[styles.comingSoon, { color: colors.textSecondary }]}>Próximamente...</Text>
                     </View>
                 );
         }
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             {/* Header que aparece en móvil cuando el sidebar no está visible */}
             {(!isSidebarExpanded && isMobile) && (
                 <Header 
@@ -96,6 +98,7 @@ export default function HomeScreen() {
                 
                 <ScrollView style={[
                     styles.mainContent,
+                    { backgroundColor: colors.background },
                     (!isSidebarExpanded || isMobile) && styles.mainContentFullWidth
                 ]}>
                     {renderContent()}
@@ -108,7 +111,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F3F4F6',
     },
     mainContainer: {
         flex: 1,
@@ -116,7 +118,6 @@ const styles = StyleSheet.create({
     },
     mainContent: {
         flex: 1,
-        backgroundColor: '#F3F4F6',
     },
     mainContentFullWidth: {
         marginLeft: 0, // Cuando el sidebar está colapsado, ocupa toda la pantalla
@@ -133,7 +134,6 @@ const styles = StyleSheet.create({
     contentTitle: {
         fontSize: 28,
         fontWeight: '700',
-        color: '#1F2937',
     },
     addButton: {
         flexDirection: 'row',
@@ -191,12 +191,10 @@ const styles = StyleSheet.create({
     },
     comingSoon: {
         fontSize: 16,
-        color: '#6B7280',
         textAlign: 'center',
         marginTop: 40,
     },
     createButton: {
-        backgroundColor: '#6D28D9', // --color-accent del archivo base-colores.md
         paddingVertical: 16,
         borderRadius: 12,
         alignItems: 'center',
@@ -213,7 +211,6 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     notebookCard: {
-        backgroundColor: '#FFFFFF',
         borderRadius: 12,
         padding: 16,
         flex: 1,
@@ -229,19 +226,16 @@ const styles = StyleSheet.create({
     },
     notebookImage: {
         height: 120,
-        backgroundColor: '#F3F4F6',
         borderRadius: 8,
         marginBottom: 12,
     },
     notebookTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#1F2937',
         marginBottom: 4,
     },
     notebookSubtitle: {
         fontSize: 14,
-        color: '#6B7280',
         lineHeight: 20,
     },
 });

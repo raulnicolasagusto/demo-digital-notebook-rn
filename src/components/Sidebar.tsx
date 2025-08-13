@@ -22,6 +22,7 @@ import {
   Target,
   Book,
 } from 'lucide-react-native';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface SidebarProps {
   isExpanded: boolean;
@@ -32,7 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
   const { user } = useUser();
   const { signOut } = useClerk();
   const { width } = useWindowDimensions();
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { isDarkMode, setIsDarkMode, colors } = useTheme();
 
   // Animation values
   const animatedWidth = React.useRef(new Animated.Value(isExpanded ? 280 : 0)).current;
@@ -82,63 +83,63 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
         />
       )}
       
-      <Animated.View style={[styles.sidebar, animatedStyle]}>
+      <Animated.View style={[styles.sidebar, animatedStyle, { backgroundColor: colors.surface }]}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity 
             onPress={() => setIsExpanded(!isExpanded)}
             style={styles.toggleButton}
           >
-            <Menu size={24} color="#6B7280" />
+            <Menu size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
         {/* User Profile */}
         <View style={styles.userProfile}>
-          <View style={styles.avatar}>
-            <User size={24} color="#6B7280" />
+          <View style={[styles.avatar, { backgroundColor: colors.background }]}>
+            <User size={24} color={colors.textSecondary} />
           </View>
           <Animated.View style={[styles.userInfo, { opacity: contentOpacity }]}>
-            <Text style={styles.userName}>
+            <Text style={[styles.userName, { color: colors.text }]}>
               {user?.firstName} {user?.lastName}
             </Text>
-            <Text style={styles.userEmail}>{user?.emailAddresses[0]?.emailAddress}</Text>
+            <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{user?.emailAddresses[0]?.emailAddress}</Text>
           </Animated.View>
         </View>
 
         {/* Menu Items */}
         <View style={styles.menu}>
           <TouchableOpacity style={styles.menuItem}>
-            <BookOpen size={20} color="#6B7280" />
-            <Animated.Text style={[styles.menuText, { opacity: contentOpacity }]}>
+            <BookOpen size={20} color={colors.textSecondary} />
+            <Animated.Text style={[styles.menuText, { opacity: contentOpacity, color: colors.text }]}>
               Mis Cuadernos
             </Animated.Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.menuItem}>
-            <FileText size={20} color="#6B7280" />
-            <Animated.Text style={[styles.menuText, { opacity: contentOpacity }]}>
+            <FileText size={20} color={colors.textSecondary} />
+            <Animated.Text style={[styles.menuText, { opacity: contentOpacity, color: colors.text }]}>
               Mis Notas
             </Animated.Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.menuItem}>
-            <Target size={20} color="#6B7280" />
-            <Animated.Text style={[styles.menuText, { opacity: contentOpacity }]}>
+            <Target size={20} color={colors.textSecondary} />
+            <Animated.Text style={[styles.menuText, { opacity: contentOpacity, color: colors.text }]}>
               Productividad
             </Animated.Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.menuItem}>
-            <Book size={20} color="#6B7280" />
-            <Animated.Text style={[styles.menuText, { opacity: contentOpacity }]}>
+            <Book size={20} color={colors.textSecondary} />
+            <Animated.Text style={[styles.menuText, { opacity: contentOpacity, color: colors.text }]}>
               Lecturas
             </Animated.Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.menuItem}>
-            <Settings size={20} color="#6B7280" />
-            <Animated.Text style={[styles.menuText, { opacity: contentOpacity }]}>
+            <Settings size={20} color={colors.textSecondary} />
+            <Animated.Text style={[styles.menuText, { opacity: contentOpacity, color: colors.text }]}>
               Configuración
             </Animated.Text>
           </TouchableOpacity>
@@ -148,11 +149,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
         <Animated.View style={[styles.darkModeToggle, { opacity: contentOpacity }]}>
           <View style={styles.darkModeLabel}>
             {isDarkMode ? (
-              <Moon size={18} color="#6B7280" />
+              <Moon size={18} color={colors.textSecondary} />
             ) : (
-              <Sun size={18} color="#6B7280" />
+              <Sun size={18} color={colors.textSecondary} />
             )}
-            <Text style={styles.darkModeText}>Modo oscuro</Text>
+            <Text style={[styles.darkModeText, { color: colors.text }]}>Modo oscuro</Text>
           </View>
           <Switch
             value={isDarkMode}
@@ -164,7 +165,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
 
         {/* Sign Out */}
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <LogOut size={20} color="#6B7280" />
+          <LogOut size={20} color="#DC2626" />
           <Animated.Text style={[styles.signOutText, { opacity: contentOpacity }]}>
             Salir
           </Animated.Text>
@@ -188,7 +189,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    backgroundColor: '#FFFFFF',
     paddingTop: 60,
     paddingHorizontal: 16,
     paddingBottom: 20,
@@ -221,7 +221,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -232,12 +231,10 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1F2937',
     marginBottom: 2,
   },
   userEmail: {
     fontSize: 14,
-    color: '#6B7280',
   },
   menu: {
     flex: 1,
@@ -252,7 +249,6 @@ const styles = StyleSheet.create({
   },
   menuText: {
     fontSize: 16,
-    color: '#374151',
     marginLeft: 12,
   },
   darkModeToggle: {
@@ -269,7 +265,6 @@ const styles = StyleSheet.create({
   },
   darkModeText: {
     fontSize: 16,
-    color: '#374151',
     marginLeft: 8,
   },
   signOutButton: {
