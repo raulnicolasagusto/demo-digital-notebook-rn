@@ -29,18 +29,17 @@ export default function NotebookScreen() {
 
   const screenData = Dimensions.get('window');
 
-  // Debug effect
-  React.useEffect(() => {
-    console.log('Paths array cambió:', paths.length, 'paths');
-  }, [paths]);
+
 
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: () => !isTextMode,
     onStartShouldSetPanResponder: () => !isTextMode,
     onPanResponderGrant: (evt) => {
       if (!isTextMode) {
-        const { locationX, locationY } = evt.nativeEvent;
-        const newPath = `M${locationX.toFixed(2)},${locationY.toFixed(2)}`;
+        const { pageX, pageY } = evt.nativeEvent;
+        // Ajustar coordenadas relativas al canvas
+        const canvasY = pageY - 120; // Aproximadamente la altura del header + toolbar
+        const newPath = `M${pageX.toFixed(2)},${canvasY.toFixed(2)}`;
         pathRef.current = newPath;
         setCurrentPath(newPath);
         setIsDrawing(true);
@@ -48,8 +47,10 @@ export default function NotebookScreen() {
     },
     onPanResponderMove: (evt) => {
       if (!isTextMode && isDrawing) {
-        const { locationX, locationY } = evt.nativeEvent;
-        const newPath = `${pathRef.current} L${locationX.toFixed(2)},${locationY.toFixed(2)}`;
+        const { pageX, pageY } = evt.nativeEvent;
+        // Ajustar coordenadas relativas al canvas
+        const canvasY = pageY - 120; // Aproximadamente la altura del header + toolbar
+        const newPath = `${pathRef.current} L${pageX.toFixed(2)},${canvasY.toFixed(2)}`;
         pathRef.current = newPath;
         setCurrentPath(newPath);
       }
@@ -58,10 +59,10 @@ export default function NotebookScreen() {
       if (!isTextMode && isDrawing && pathRef.current) {
         // Guardar el path actual antes de resetear
         const completedPath = pathRef.current;
-        console.log('Guardando path:', completedPath);
+       
         setPaths(prev => {
           const newPaths = [...prev, { path: completedPath, color: '#000000' }];
-          console.log('Nuevo array de paths:', newPaths);
+          
           return newPaths;
         });
         
@@ -75,13 +76,15 @@ export default function NotebookScreen() {
 
   const handleCanvasPress = (evt: any) => {
     if (isTextMode) {
-      const { locationX, locationY } = evt.nativeEvent;
+      const { pageX, pageY } = evt.nativeEvent;
+      // Ajustar coordenadas relativas al canvas
+      const canvasY = pageY - 120; // Aproximadamente la altura del header + toolbar
       const newTextId = Date.now().toString();
       setTextElements(prev => [...prev, {
         id: newTextId,
         text: '',
-        x: locationX,
-        y: locationY
+        x: pageX,
+        y: canvasY
       }]);
       setEditingText(newTextId);
     }
@@ -167,6 +170,7 @@ export default function NotebookScreen() {
               styles.textElement,
               { left: element.x, top: element.y }
             ]}
+            pointerEvents={isTextMode ? "auto" : "none"}
           >
             {editingText === element.id ? (
               <TextInput
