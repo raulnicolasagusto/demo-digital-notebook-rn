@@ -23,6 +23,7 @@ export default function NotebookScreen() {
   const router = useRouter();
   const [isDrawing, setIsDrawing] = useState(false);
   const [isTextMode, setIsTextMode] = useState(false);
+  const [isEraserMode, setIsEraserMode] = useState(false);
   const [currentPath, setCurrentPath] = useState('');
   const [paths, setPaths] = useState<DrawPath[]>([]);
   const [textElements, setTextElements] = useState<TextElement[]>([]);
@@ -49,6 +50,7 @@ export default function NotebookScreen() {
       {/* Canvas with Drawing and Text */}
       <CanvasDrawing
         isTextMode={isTextMode}
+        isEraserMode={isEraserMode}
         isDrawing={isDrawing}
         setIsDrawing={setIsDrawing}
         currentPath={currentPath}
@@ -70,7 +72,11 @@ export default function NotebookScreen() {
       {/* Floating Tool Button */}
       <FloatingToolButton
         isTextMode={isTextMode}
-        onModeChange={setIsTextMode}
+        isEraserMode={isEraserMode}
+        onModeChange={(mode) => {
+          setIsTextMode(mode === 'text');
+          setIsEraserMode(mode === 'eraser');
+        }}
       />
     </View>
   );

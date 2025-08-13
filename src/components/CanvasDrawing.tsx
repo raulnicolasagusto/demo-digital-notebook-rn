@@ -9,6 +9,7 @@ interface DrawPath {
 
 interface CanvasDrawingProps {
   isTextMode: boolean;
+  isEraserMode: boolean;
   isDrawing: boolean;
   setIsDrawing: (drawing: boolean) => void;
   currentPath: string;
@@ -21,6 +22,7 @@ interface CanvasDrawingProps {
 
 export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
   isTextMode,
+  isEraserMode,
   isDrawing,
   setIsDrawing,
   currentPath,
@@ -32,6 +34,24 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
 }) => {
   const pathRef = useRef('');
 
+  // Function to check if a point is near a path (for erasing)
+  const isPointNearPath = (touchX: number, touchY: number, pathString: string, threshold: number = 20): boolean => {
+    // Parse path string to get points
+    const pathCommands = pathString.split(/[ML]/);
+    for (let i = 1; i < pathCommands.length; i++) {
+      const coords = pathCommands[i].trim().split(',');
+      if (coords.length === 2) {
+        const pathX = parseFloat(coords[0]);
+        const pathY = parseFloat(coords[1]);
+        const distance = Math.sqrt(Math.pow(touchX - pathX, 2) + Math.pow(touchY - pathY, 2));
+        if (distance <= threshold) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: () => !isTextMode,
     onStartShouldSetPanResponder: () => !isTextMode,
@@ -40,24 +60,57 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
         const { pageX, pageY } = evt.nativeEvent;
         // Ajustar coordenadas relativas al canvas
         const canvasY = pageY - 70; // Aproximadamente la altura del header
-        const newPath = `M${pageX.toFixed(2)},${canvasY.toFixed(2)}`;
-        pathRef.current = newPath;
-        setCurrentPath(newPath);
-        setIsDrawing(true);
+        
+        if (isEraserMode) {
+          // Check if touch point is near any path for erasing
+          const pathsToRemove: number[] = [];
+          paths.forEach((pathData, index) => {
+            if (isPointNearPath(pageX, canvasY, pathData.path)) {
+              pathsToRemove.push(index);
+            }
+          });
+          
+          // Remove paths that were touched
+          if (pathsToRemove.length > 0) {
+            setPaths(prev => prev.filter((_, index) => !pathsToRemove.includes(index)));
+          }
+        } else {
+          // Normal drawing mode
+          const newPath = `M${pageX.toFixed(2)},${canvasY.toFixed(2)}`;
+          pathRef.current = newPath;
+          setCurrentPath(newPath);
+          setIsDrawing(true);
+        }
       }
     },
     onPanResponderMove: (evt) => {
-      if (!isTextMode && isDrawing) {
+      if (!isTextMode && !isEraserMode && isDrawing) {
         const { pageX, pageY } = evt.nativeEvent;
         // Ajustar coordenadas relativas al canvas
         const canvasY = pageY - 70; // Aproximadamente la altura del header
         const newPath = `${pathRef.current} L${pageX.toFixed(2)},${canvasY.toFixed(2)}`;
         pathRef.current = newPath;
         setCurrentPath(newPath);
+      } else if (!isTextMode && isEraserMode) {
+        // Continue erasing while moving
+        const { pageX, pageY } = evt.nativeEvent;
+        const canvasY = pageY - 70;
+        
+        const pathsToRemove: number[] = [];
+        paths.forEach((pathData, index) => {
+          if (isPointNearPath(pageX, canvasY, pathData.path)) {
+            pathsToRemove.push(index);
+          }
+        });
+        
+        // Remove paths that were touched
+        if (pathsToRemove.length > 0) {
+          setPaths(prev => prev.filter((_, index) => !pathsToRemove.includes(index)));
+        }
       }
     },
     onPanResponderRelease: () => {
-      if (!isTextMode && isDrawing && pathRef.current) {
+      if (!isTextMode && !isEraserMode && isDrawing && pathRef.current) {
         // Guardar el path actual antes de resetear
         const completedPath = pathRef.current;
         

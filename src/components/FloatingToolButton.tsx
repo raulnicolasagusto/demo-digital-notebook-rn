@@ -1,14 +1,16 @@
 import React, { useRef, useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import { Pencil, Type, Plus } from 'lucide-react-native';
+import { Pencil, Type, Plus, Eraser } from 'lucide-react-native';
 
 interface FloatingToolButtonProps {
   isTextMode: boolean;
-  onModeChange: (isText: boolean) => void;
+  isEraserMode: boolean;
+  onModeChange: (mode: 'draw' | 'text' | 'eraser') => void;
 }
 
 export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
   isTextMode,
+  isEraserMode,
   onModeChange,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -45,8 +47,8 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
     setIsExpanded(!isExpanded);
   };
 
-  const handleToolSelect = (tool: 'draw' | 'text') => {
-    onModeChange(tool === 'text');
+  const handleToolSelect = (tool: 'draw' | 'text' | 'eraser') => {
+    onModeChange(tool);
     toggleTools(); // Close the menu after selection
   };
 
@@ -66,10 +68,28 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
             ]}
           >
             <TouchableOpacity 
-              style={[styles.toolOptionButton, !isTextMode && styles.toolOptionActive]}
+              style={[styles.toolOptionButton, !isTextMode && !isEraserMode && styles.toolOptionActive]}
               onPress={() => handleToolSelect('draw')}
             >
-              <Pencil size={20} color={!isTextMode ? "#FFFFFF" : "#6D28D9"} />
+              <Pencil size={20} color={!isTextMode && !isEraserMode ? "#FFFFFF" : "#6D28D9"} />
+            </TouchableOpacity>
+          </Animated.View>
+
+          <Animated.View 
+            style={[
+              styles.toolOption,
+              styles.toolOptionEraser,
+              {
+                opacity: toolsOpacity,
+                transform: [{ scale: toolsScale }]
+              }
+            ]}
+          >
+            <TouchableOpacity 
+              style={[styles.toolOptionButton, isEraserMode && styles.toolOptionActive]}
+              onPress={() => handleToolSelect('eraser')}
+            >
+              <Eraser size={20} color={isEraserMode ? "#FFFFFF" : "#6D28D9"} />
             </TouchableOpacity>
           </Animated.View>
 
@@ -144,8 +164,11 @@ const styles = StyleSheet.create({
   toolOptionDraw: {
     bottom: 80,
   },
-  toolOptionText: {
+  toolOptionEraser: {
     bottom: 140,
+  },
+  toolOptionText: {
+    bottom: 200,
   },
   toolOptionButton: {
     width: 48,
