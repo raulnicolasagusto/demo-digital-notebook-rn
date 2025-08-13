@@ -71,6 +71,7 @@ Basándome en la sección [X], implementaré [FUNCIONALIDAD] siguiendo [PATRÓN/
 - ❌ Modificar configuraciones globales sin consultar
 - ❌ Implementar patrones diferentes a los ya establecidos
 - ❌ Optimizar rendimiento no solicitado
+- ❌ NO SE DEBE CAMBIAR LA LOGICA SI LO QUE SE PIDE ES UN CAMBIO VISUAL.( POR EJ: CAMBIAR BOTONES DE LUGAR, MOVER COMPONENTES ETC.)
 
 ### Lo que SÍ se debe hacer:
 - ✅ Implementar exactamente lo solicitado

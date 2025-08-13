@@ -1,8 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, PanResponder, Dimensions, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import Svg, { Path } from 'react-native-svg';
-import { Pencil, Type, ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
+import { FloatingToolButton } from '@/components/FloatingToolButton';
+import { CanvasDrawing } from '@/components/CanvasDrawing';
+import { CanvasText, createCanvasTextHandler } from '@/components/CanvasText';
 
 interface DrawPath {
   path: string;
@@ -25,84 +27,13 @@ export default function NotebookScreen() {
   const [paths, setPaths] = useState<DrawPath[]>([]);
   const [textElements, setTextElements] = useState<TextElement[]>([]);
   const [editingText, setEditingText] = useState<string | null>(null);
-  const pathRef = useRef('');
 
-  const screenData = Dimensions.get('window');
-
-
-
-  const panResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: () => !isTextMode,
-    onStartShouldSetPanResponder: () => !isTextMode,
-    onPanResponderGrant: (evt) => {
-      if (!isTextMode) {
-        const { pageX, pageY } = evt.nativeEvent;
-        // Ajustar coordenadas relativas al canvas
-        const canvasY = pageY - 120; // Aproximadamente la altura del header + toolbar
-        const newPath = `M${pageX.toFixed(2)},${canvasY.toFixed(2)}`;
-        pathRef.current = newPath;
-        setCurrentPath(newPath);
-        setIsDrawing(true);
-      }
-    },
-    onPanResponderMove: (evt) => {
-      if (!isTextMode && isDrawing) {
-        const { pageX, pageY } = evt.nativeEvent;
-        // Ajustar coordenadas relativas al canvas
-        const canvasY = pageY - 120; // Aproximadamente la altura del header + toolbar
-        const newPath = `${pathRef.current} L${pageX.toFixed(2)},${canvasY.toFixed(2)}`;
-        pathRef.current = newPath;
-        setCurrentPath(newPath);
-      }
-    },
-    onPanResponderRelease: () => {
-      if (!isTextMode && isDrawing && pathRef.current) {
-        // Guardar el path actual antes de resetear
-        const completedPath = pathRef.current;
-       
-        setPaths(prev => {
-          const newPaths = [...prev, { path: completedPath, color: '#000000' }];
-          
-          return newPaths;
-        });
-        
-        // Resetear estado inmediatamente
-        setCurrentPath('');
-        setIsDrawing(false);
-        pathRef.current = '';
-      }
-    },
-  });
-
-  const handleCanvasPress = (evt: any) => {
-    if (isTextMode) {
-      const { pageX, pageY } = evt.nativeEvent;
-      // Ajustar coordenadas relativas al canvas
-      const canvasY = pageY - 120; // Aproximadamente la altura del header + toolbar
-      const newTextId = Date.now().toString();
-      setTextElements(prev => [...prev, {
-        id: newTextId,
-        text: '',
-        x: pageX,
-        y: canvasY
-      }]);
-      setEditingText(newTextId);
-    }
-  };
-
-  const handleTextChange = (textId: string, newText: string) => {
-    setTextElements(prev => 
-      prev.map(element => 
-        element.id === textId ? { ...element, text: newText } : element
-      )
-    );
-  };
-
-  const finishTextEditing = () => {
-    setEditingText(null);
-    // Remove empty text elements
-    setTextElements(prev => prev.filter(element => element.text.trim() !== ''));
-  };
+  // Create canvas text handler
+  const handleCanvasPress = createCanvasTextHandler(
+    isTextMode,
+    setTextElements,
+    setEditingText
+  );
 
   return (
     <View style={styles.container}>
@@ -115,82 +46,32 @@ export default function NotebookScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Tools */}
-      <View style={styles.toolbar}>
-        <TouchableOpacity 
-          style={[styles.toolButton, !isTextMode && styles.toolButtonActive]}
-          onPress={() => setIsTextMode(false)}
-        >
-          <Pencil size={20} color={!isTextMode ? "#FFFFFF" : "#374151"} />
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.toolButton, isTextMode && styles.toolButtonActive]}
-          onPress={() => setIsTextMode(true)}
-        >
-          <Type size={20} color={isTextMode ? "#FFFFFF" : "#374151"} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Canvas */}
-      <View 
-        style={styles.canvas}
-        {...panResponder.panHandlers}
-        onTouchStart={handleCanvasPress}
+      {/* Canvas with Drawing and Text */}
+      <CanvasDrawing
+        isTextMode={isTextMode}
+        isDrawing={isDrawing}
+        setIsDrawing={setIsDrawing}
+        currentPath={currentPath}
+        setCurrentPath={setCurrentPath}
+        paths={paths}
+        setPaths={setPaths}
+        onCanvasPress={handleCanvasPress}
       >
-        <Svg style={StyleSheet.absoluteFillObject}>
-          {paths.map((pathData, index) => (
-            <Path
-              key={index}
-              d={pathData.path}
-              stroke={pathData.color}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-          ))}
-          {currentPath && (
-            <Path
-              d={currentPath}
-              stroke="#000000"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-          )}
-        </Svg>
+        <CanvasText
+          isTextMode={isTextMode}
+          textElements={textElements}
+          setTextElements={setTextElements}
+          editingText={editingText}
+          setEditingText={setEditingText}
+          onCanvasPress={handleCanvasPress}
+        />
+      </CanvasDrawing>
 
-        {/* Text Elements */}
-        {textElements.map((element) => (
-          <View
-            key={element.id}
-            style={[
-              styles.textElement,
-              { left: element.x, top: element.y }
-            ]}
-            pointerEvents={isTextMode ? "auto" : "none"}
-          >
-            {editingText === element.id ? (
-              <TextInput
-                style={styles.textInput}
-                value={element.text}
-                onChangeText={(text) => handleTextChange(element.id, text)}
-                onBlur={finishTextEditing}
-                onSubmitEditing={finishTextEditing}
-                autoFocus
-                multiline
-                placeholder="Escribe aquí..."
-              />
-            ) : (
-              <TouchableOpacity onPress={() => setEditingText(element.id)}>
-                <Text style={styles.textDisplay}>{element.text}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ))}
-      </View>
+      {/* Floating Tool Button */}
+      <FloatingToolButton
+        isTextMode={isTextMode}
+        onModeChange={setIsTextMode}
+      />
     </View>
   );
 }
@@ -220,50 +101,5 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 40,
-  },
-  toolbar: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    gap: 12,
-  },
-  toolButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-  },
-  toolButtonActive: {
-    backgroundColor: '#6D28D9',
-  },
-  canvas: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  textElement: {
-    position: 'absolute',
-    minWidth: 50,
-    minHeight: 30,
-  },
-  textInput: {
-    fontSize: 16,
-    color: '#1F2937',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#6D28D9',
-    minWidth: 100,
-  },
-  textDisplay: {
-    fontSize: 16,
-    color: '#1F2937',
-    backgroundColor: 'transparent',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
   },
 });
