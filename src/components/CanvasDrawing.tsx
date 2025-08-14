@@ -52,6 +52,58 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
     return false;
   };
 
+  // Function to remove segments of a path that are near the eraser point
+  const eraseFromPath = (pathString: string, eraseX: number, eraseY: number, threshold: number = 20): string[] => {
+    const commands = pathString.split(/([ML])/);
+    const resultPaths: string[] = [];
+    let currentPath = '';
+    let lastValidPoint = '';
+    
+    for (let i = 0; i < commands.length; i++) {
+      const command = commands[i];
+      
+      if (command === 'M' || command === 'L') {
+        // Process the next coordinate if it exists
+        if (i + 1 < commands.length) {
+          const coords = commands[i + 1].trim();
+          if (coords) {
+            const [x, y] = coords.split(',').map(parseFloat);
+            if (!isNaN(x) && !isNaN(y)) {
+              const distance = Math.sqrt(Math.pow(eraseX - x, 2) + Math.pow(eraseY - y, 2));
+              
+              if (distance > threshold) {
+                // Point is safe, add to current path
+                if (currentPath === '') {
+                  currentPath = `M${x},${y}`;
+                  lastValidPoint = `${x},${y}`;
+                } else {
+                  currentPath += ` L${x},${y}`;
+                  lastValidPoint = `${x},${y}`;
+                }
+              } else {
+                // Point should be erased
+                if (currentPath && currentPath !== `M${lastValidPoint}`) {
+                  // Save current path if it has content
+                  resultPaths.push(currentPath);
+                }
+                currentPath = '';
+                lastValidPoint = '';
+              }
+            }
+          }
+          i++; // Skip the coordinate part since we processed it
+        }
+      }
+    }
+    
+    // Add the last path if it exists and has meaningful content
+    if (currentPath && currentPath.includes('L')) {
+      resultPaths.push(currentPath);
+    }
+    
+    return resultPaths;
+  };
+
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: () => !isTextMode,
     onStartShouldSetPanResponder: () => !isTextMode,
@@ -62,18 +114,27 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
         const canvasY = pageY - 70; // Aproximadamente la altura del header
         
         if (isEraserMode) {
-          // Check if touch point is near any path for erasing
-          const pathsToRemove: number[] = [];
-          paths.forEach((pathData, index) => {
+          // Check if touch point is near any path for erasing and segment them
+          const updatedPaths: DrawPath[] = [];
+          
+          paths.forEach((pathData) => {
             if (isPointNearPath(pageX, canvasY, pathData.path)) {
-              pathsToRemove.push(index);
+              // Erase from this path and create new segments
+              const remainingSegments = eraseFromPath(pathData.path, pageX, canvasY);
+              
+              // Add remaining segments as separate paths
+              remainingSegments.forEach(segment => {
+                if (segment.length > 5) { // Only add meaningful segments
+                  updatedPaths.push({ path: segment, color: pathData.color });
+                }
+              });
+            } else {
+              // Keep the original path unchanged
+              updatedPaths.push(pathData);
             }
           });
           
-          // Remove paths that were touched
-          if (pathsToRemove.length > 0) {
-            setPaths(prev => prev.filter((_, index) => !pathsToRemove.includes(index)));
-          }
+          setPaths(updatedPaths);
         } else {
           // Normal drawing mode
           const newPath = `M${pageX.toFixed(2)},${canvasY.toFixed(2)}`;
@@ -96,17 +157,26 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
         const { pageX, pageY } = evt.nativeEvent;
         const canvasY = pageY - 70;
         
-        const pathsToRemove: number[] = [];
-        paths.forEach((pathData, index) => {
+        const updatedPaths: DrawPath[] = [];
+        
+        paths.forEach((pathData) => {
           if (isPointNearPath(pageX, canvasY, pathData.path)) {
-            pathsToRemove.push(index);
+            // Erase from this path and create new segments
+            const remainingSegments = eraseFromPath(pathData.path, pageX, canvasY);
+            
+            // Add remaining segments as separate paths
+            remainingSegments.forEach(segment => {
+              if (segment.includes('L')) { // Only add segments that have actual drawing content
+                updatedPaths.push({ path: segment, color: pathData.color });
+              }
+            });
+          } else {
+            // Keep the original path unchanged
+            updatedPaths.push(pathData);
           }
         });
         
-        // Remove paths that were touched
-        if (pathsToRemove.length > 0) {
-          setPaths(prev => prev.filter((_, index) => !pathsToRemove.includes(index)));
-        }
+        setPaths(updatedPaths);
       }
     },
     onPanResponderRelease: () => {
