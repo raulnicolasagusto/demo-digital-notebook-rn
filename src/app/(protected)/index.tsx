@@ -6,6 +6,8 @@ import { Sidebar } from '@/components/Sidebar';
 import Header from '@/components/Header';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CreateNotebookModal } from '@/components/CreateNotebookModal';
+// import { SupabaseTestComponent } from '@/components/SupabaseTestComponent'; // Comentado para producción
 
 export default function HomeScreen() {
     const { user } = useUser();
@@ -13,6 +15,7 @@ export default function HomeScreen() {
     const { colors } = useTheme();
     const [activeSection, setActiveSection] = useState('notebooks');
     const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+    const [showCreateModal, setShowCreateModal] = useState(false);
     const { width } = useWindowDimensions();
     
     // Mobile breakpoint
@@ -34,7 +37,10 @@ export default function HomeScreen() {
             case 'notebooks':
                 return (
                     <View style={styles.content}>
-                        <TouchableOpacity style={[styles.createButton, { backgroundColor: colors.accent }]}>
+                        <TouchableOpacity 
+                            style={[styles.createButton, { backgroundColor: colors.accent }]}
+                            onPress={() => setShowCreateModal(true)}
+                        >
                             <Text style={styles.createButtonText}>Crear Cuaderno</Text>
                         </TouchableOpacity>
                         
@@ -101,9 +107,22 @@ export default function HomeScreen() {
                     { backgroundColor: colors.background },
                     (!isSidebarExpanded || isMobile) && styles.mainContentFullWidth
                 ]}>
+                    {/* Componente de prueba de Supabase - Comentado para producción */}
+                    {/* <SupabaseTestComponent /> */}
+                    
                     {renderContent()}
                 </ScrollView>
             </View>
+
+            {/* Modal para crear cuaderno */}
+            <CreateNotebookModal
+                visible={showCreateModal}
+                onClose={() => setShowCreateModal(false)}
+                onSave={(notebookData) => {
+                    console.log('Nuevo cuaderno:', notebookData);
+                    // TODO: Implementar guardado en base de datos
+                }}
+            />
         </View>
     );
 }
