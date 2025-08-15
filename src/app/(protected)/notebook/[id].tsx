@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react-native';
 import { FloatingToolButton } from '@/components/FloatingToolButton';
 import { CanvasDrawing } from '@/components/CanvasDrawing';
 import { CanvasText, createCanvasTextHandler } from '@/components/CanvasText';
+import { ResponsiveCanvas } from '@/components/ResponsiveCanvas';
 import { createSupabaseClientWithAuth } from '@/lib/supabase';
 
 interface DrawPath {
@@ -140,27 +141,29 @@ export default function NotebookScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Canvas with Drawing and Text */}
-      <CanvasDrawing
-        isTextMode={isTextMode}
-        isEraserMode={isEraserMode}
-        isDrawing={isDrawing}
-        setIsDrawing={setIsDrawing}
-        currentPath={currentPath}
-        setCurrentPath={setCurrentPath}
-        paths={paths}
-        setPaths={setPaths}
-        onCanvasPress={handleCanvasPress}
-      >
-        <CanvasText
+      {/* Responsive Canvas Container */}
+      <ResponsiveCanvas>
+        <CanvasDrawing
           isTextMode={isTextMode}
-          textElements={textElements}
-          setTextElements={setTextElements}
-          editingText={editingText}
-          setEditingText={setEditingText}
+          isEraserMode={isEraserMode}
+          isDrawing={isDrawing}
+          setIsDrawing={setIsDrawing}
+          currentPath={currentPath}
+          setCurrentPath={setCurrentPath}
+          paths={paths}
+          setPaths={setPaths}
           onCanvasPress={handleCanvasPress}
-        />
-      </CanvasDrawing>
+        >
+          <CanvasText
+            isTextMode={isTextMode}
+            textElements={textElements}
+            setTextElements={setTextElements}
+            editingText={editingText}
+            setEditingText={setEditingText}
+            onCanvasPress={handleCanvasPress}
+          />
+        </CanvasDrawing>
+      </ResponsiveCanvas>
 
       {/* Floating Tool Button */}
       <FloatingToolButton

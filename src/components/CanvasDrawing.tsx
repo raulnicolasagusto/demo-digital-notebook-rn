@@ -33,6 +33,23 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
   children,
 }) => {
   const pathRef = useRef('');
+  const canvasViewRef = useRef<View>(null);
+
+  // Función para convertir coordenadas globales a coordenadas del canvas
+  const getCanvasCoordinates = (pageX: number, pageY: number): Promise<{x: number, y: number}> => {
+    return new Promise((resolve) => {
+      if (canvasViewRef.current) {
+        canvasViewRef.current.measure((x, y, width, height, pageXOffset, pageYOffset) => {
+          const canvasX = pageX - pageXOffset;
+          const canvasY = pageY - pageYOffset;
+          resolve({ x: canvasX, y: canvasY });
+        });
+      } else {
+        // Fallback: usar coordenadas directas
+        resolve({ x: pageX, y: pageY });
+      }
+    });
+  };
 
   // Function to check if a point is near a path (for erasing)
   const isPointNearPath = (touchX: number, touchY: number, pathString: string, threshold: number = 20): boolean => {
@@ -109,18 +126,19 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
     onStartShouldSetPanResponder: () => !isTextMode,
     onPanResponderGrant: (evt) => {
       if (!isTextMode) {
-        const { pageX, pageY } = evt.nativeEvent;
-        // Ajustar coordenadas relativas al canvas
-        const canvasY = pageY - 70; // Aproximadamente la altura del header
+        const { locationX, locationY } = evt.nativeEvent;
+        // Usar locationX/locationY que son coordenadas relativas al componente
+        const canvasX = locationX;
+        const canvasY = locationY;
         
         if (isEraserMode) {
           // Check if touch point is near any path for erasing and segment them
           const updatedPaths: DrawPath[] = [];
           
           paths.forEach((pathData) => {
-            if (isPointNearPath(pageX, canvasY, pathData.path)) {
+            if (isPointNearPath(canvasX, canvasY, pathData.path)) {
               // Erase from this path and create new segments
-              const remainingSegments = eraseFromPath(pathData.path, pageX, canvasY);
+              const remainingSegments = eraseFromPath(pathData.path, canvasX, canvasY);
               
               // Add remaining segments as separate paths
               remainingSegments.forEach(segment => {
@@ -137,7 +155,7 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
           setPaths(updatedPaths);
         } else {
           // Normal drawing mode
-          const newPath = `M${pageX.toFixed(2)},${canvasY.toFixed(2)}`;
+          const newPath = `M${canvasX.toFixed(2)},${canvasY.toFixed(2)}`;
           pathRef.current = newPath;
           setCurrentPath(newPath);
           setIsDrawing(true);
@@ -146,23 +164,25 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
     },
     onPanResponderMove: (evt) => {
       if (!isTextMode && !isEraserMode && isDrawing) {
-        const { pageX, pageY } = evt.nativeEvent;
-        // Ajustar coordenadas relativas al canvas
-        const canvasY = pageY - 70; // Aproximadamente la altura del header
-        const newPath = `${pathRef.current} L${pageX.toFixed(2)},${canvasY.toFixed(2)}`;
+        const { locationX, locationY } = evt.nativeEvent;
+        // Usar locationX/locationY que son coordenadas relativas al componente
+        const canvasX = locationX;
+        const canvasY = locationY;
+        const newPath = `${pathRef.current} L${canvasX.toFixed(2)},${canvasY.toFixed(2)}`;
         pathRef.current = newPath;
         setCurrentPath(newPath);
       } else if (!isTextMode && isEraserMode) {
         // Continue erasing while moving
-        const { pageX, pageY } = evt.nativeEvent;
-        const canvasY = pageY - 70;
+        const { locationX, locationY } = evt.nativeEvent;
+        const canvasX = locationX;
+        const canvasY = locationY;
         
         const updatedPaths: DrawPath[] = [];
         
         paths.forEach((pathData) => {
-          if (isPointNearPath(pageX, canvasY, pathData.path)) {
+          if (isPointNearPath(canvasX, canvasY, pathData.path)) {
             // Erase from this path and create new segments
-            const remainingSegments = eraseFromPath(pathData.path, pageX, canvasY);
+            const remainingSegments = eraseFromPath(pathData.path, canvasX, canvasY);
             
             // Add remaining segments as separate paths
             remainingSegments.forEach(segment => {
@@ -199,6 +219,7 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
 
   return (
     <View 
+      ref={canvasViewRef}
       style={styles.canvas}
       {...panResponder.panHandlers}
       onTouchStart={onCanvasPress}

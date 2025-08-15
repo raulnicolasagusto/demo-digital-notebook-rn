@@ -176,14 +176,16 @@ export const createCanvasTextHandler = (
 ) => {
   return (evt: any) => {
     if (isTextMode) {
-      const { pageX, pageY } = evt.nativeEvent;
-      // Ajustar coordenadas relativas al canvas
-      const canvasY = pageY - 70; // Aproximadamente la altura del header
+      const { locationX, locationY } = evt.nativeEvent;
+      // Usar locationX/locationY que son coordenadas relativas al componente
+      const canvasX = locationX || evt.nativeEvent.pageX;
+      const canvasY = locationY || evt.nativeEvent.pageY;
+      
       const newTextId = Date.now().toString();
       setTextElements(prev => [...prev, {
         id: newTextId,
         text: '',
-        x: pageX,
+        x: canvasX,
         y: canvasY,
         width: 150, // Ancho inicial
         height: 80  // Alto inicial
