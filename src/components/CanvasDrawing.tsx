@@ -1,6 +1,13 @@
-import React, { useRef } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { View, StyleSheet, PanResponder } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { PermanentCanvas } from './PermanentCanvas';
+import { TemporalCanvas } from './TemporalCanvas';
+import { 
+  optimizeStroke, 
+  SMOOTHING_PRESETS,
+  pathStringToPoints,
+  pointsToPathString 
+} from '../utils/strokeSmoothing';
 
 interface DrawPath {
   path: string;
@@ -34,6 +41,36 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
 }) => {
   const pathRef = useRef('');
   const canvasViewRef = useRef<View>(null);
+  
+  // 🚀 FASE 1 OPTIMIZACIONES: Batch Updates + Path Buffer
+  const pointsBuffer = useRef<string[]>([]);
+  const animationFrameRef = useRef<number | null>(null);
+  const batchedPath = useRef<string>('');
+  
+  // Optimized path update with batching
+  const flushPathUpdate = useCallback(() => {
+    if (batchedPath.current !== currentPath) {
+      setCurrentPath(batchedPath.current);
+    }
+    animationFrameRef.current = null;
+  }, [currentPath, setCurrentPath]);
+  
+  // Schedule batched update
+  const scheduleBatchUpdate = useCallback((newPath: string) => {
+    batchedPath.current = newPath;
+    if (animationFrameRef.current === null) {
+      animationFrameRef.current = requestAnimationFrame(flushPathUpdate);
+    }
+  }, [flushPathUpdate]);
+  
+  // Cleanup animation frame on unmount
+  React.useEffect(() => {
+    return () => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
 
   // Función para convertir coordenadas globales a coordenadas del canvas
   const getCanvasCoordinates = (pageX: number, pageY: number): Promise<{x: number, y: number}> => {
@@ -154,10 +191,14 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
           
           setPaths(updatedPaths);
         } else {
-          // Normal drawing mode
-          const newPath = `M${canvasX.toFixed(2)},${canvasY.toFixed(2)}`;
+          // 🚀 OPTIMIZED: Normal drawing mode with buffer initialization
+          const startPoint = `${canvasX.toFixed(1)},${canvasY.toFixed(1)}`;
+          pointsBuffer.current = [startPoint];
+          
+          const newPath = `M${startPoint}`;
           pathRef.current = newPath;
-          setCurrentPath(newPath);
+          batchedPath.current = newPath;
+          setCurrentPath(newPath); // Set immediately for first point
           setIsDrawing(true);
         }
       }
@@ -168,11 +209,22 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
         // Usar locationX/locationY que son coordenadas relativas al componente
         const canvasX = locationX;
         const canvasY = locationY;
-        const newPath = `${pathRef.current} L${canvasX.toFixed(2)},${canvasY.toFixed(2)}`;
+        
+        // 🚀 OPTIMIZED: Use buffer + batched updates
+        const newPoint = `${canvasX.toFixed(1)},${canvasY.toFixed(1)}`;
+        pointsBuffer.current.push(newPoint);
+        
+        // Build path more efficiently
+        const newPath = pointsBuffer.current.length === 1 
+          ? `M${pointsBuffer.current[0]}`
+          : `M${pointsBuffer.current[0]} L${pointsBuffer.current.slice(1).join(' L')}`;
+        
         pathRef.current = newPath;
-        setCurrentPath(newPath);
+        // Use batched update instead of immediate setState
+        scheduleBatchUpdate(newPath);
+        
       } else if (!isTextMode && isEraserMode) {
-        // Continue erasing while moving
+        // Continue erasing while moving (keep original logic)
         const { locationX, locationY } = evt.nativeEvent;
         const canvasX = locationX;
         const canvasY = locationY;
@@ -201,18 +253,37 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
     },
     onPanResponderRelease: () => {
       if (!isTextMode && !isEraserMode && isDrawing && pathRef.current) {
-        // Guardar el path actual antes de resetear
-        const completedPath = pathRef.current;
+        // 🚀 FASE 2: Ensure final update is processed + stroke smoothing
+        if (animationFrameRef.current !== null) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
+        
+        // Optimizar el trazo completado usando Douglas-Peucker
+        let completedPath = pathRef.current;
+        try {
+          // Usar configuración balanceada para la mayoría de casos
+          completedPath = optimizeStroke(completedPath, SMOOTHING_PRESETS.BALANCED);
+        } catch (error) {
+          // Si la optimización falla, usar el path original
+          console.warn('Stroke optimization failed, using original path');
+          completedPath = pathRef.current;
+        }
+        
+        // Flush final path update
+        setCurrentPath(completedPath);
         
         setPaths(prev => {
           const newPaths = [...prev, { path: completedPath, color: '#000000' }];
           return newPaths;
         });
         
-        // Resetear estado inmediatamente
+        // 🚀 OPTIMIZED: Clear all buffers and reset
         setCurrentPath('');
         setIsDrawing(false);
         pathRef.current = '';
+        pointsBuffer.current = [];
+        batchedPath.current = '';
       }
     },
   });
@@ -224,29 +295,23 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
       {...panResponder.panHandlers}
       onTouchStart={onCanvasPress}
     >
-      <Svg style={StyleSheet.absoluteFillObject}>
-        {paths.map((pathData, index) => (
-          <Path
-            key={index}
-            d={pathData.path}
-            stroke={pathData.color}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        ))}
-        {currentPath && (
-          <Path
-            d={currentPath}
-            stroke="#000000"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        )}
-      </Svg>
+      {/* 🚀 FASE 2: Separación de capas optimizada */}
+      
+      {/* Capa permanente: Solo se re-renderiza cuando paths cambian */}
+      <PermanentCanvas 
+        paths={paths} 
+        strokeWidth={2} 
+      />
+      
+      {/* Capa temporal: Solo se re-renderiza durante el dibujo activo */}
+      {currentPath && isDrawing && (
+        <TemporalCanvas 
+          currentPath={currentPath}
+          strokeColor="#000000"
+          strokeWidth={2}
+        />
+      )}
+      
       {children}
     </View>
   );
