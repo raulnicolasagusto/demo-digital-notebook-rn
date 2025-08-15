@@ -1,17 +1,19 @@
 import React, { useRef, useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import { Pencil, Type, Plus, Eraser } from 'lucide-react-native';
+import { Pencil, Type, Plus, Eraser, Save } from 'lucide-react-native';
 
 interface FloatingToolButtonProps {
   isTextMode: boolean;
   isEraserMode: boolean;
   onModeChange: (mode: 'draw' | 'text' | 'eraser') => void;
+  onSave?: () => void;
 }
 
 export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
   isTextMode,
   isEraserMode,
   onModeChange,
+  onSave,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
@@ -52,11 +54,36 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
     toggleTools(); // Close the menu after selection
   };
 
+  const handleSave = () => {
+    if (onSave) {
+      onSave();
+    }
+    toggleTools(); // Close the menu after save
+  };
+
   return (
     <View style={styles.floatingButtonContainer}>
       {/* Tool Options */}
       {isExpanded && (
         <>
+          <Animated.View 
+            style={[
+              styles.toolOption,
+              styles.toolOptionSave,
+              {
+                opacity: toolsOpacity,
+                transform: [{ scale: toolsScale }]
+              }
+            ]}
+          >
+            <TouchableOpacity 
+              style={styles.toolOptionButton}
+              onPress={handleSave}
+            >
+              <Save size={20} color="#6D28D9" />
+            </TouchableOpacity>
+          </Animated.View>
+
           <Animated.View 
             style={[
               styles.toolOption,
@@ -169,6 +196,9 @@ const styles = StyleSheet.create({
   },
   toolOptionText: {
     bottom: 200,
+  },
+  toolOptionSave: {
+    bottom: 260,
   },
   toolOptionButton: {
     width: 48,

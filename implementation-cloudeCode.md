@@ -72,6 +72,8 @@ Basándome en la sección [X], implementaré [FUNCIONALIDAD] siguiendo [PATRÓN/
 - ❌ Implementar patrones diferentes a los ya establecidos
 - ❌ Optimizar rendimiento no solicitado
 - ❌ NO SE DEBE CAMBIAR LA LOGICA SI LO QUE SE PIDE ES UN CAMBIO VISUAL.( POR EJ: CAMBIAR BOTONES DE LUGAR, MOVER COMPONENTES ETC.)
+- ❌ NO SE DEBE HACER IMPLEMENTAR CAMBIOS EN LA BASE DE DATOS SIN ANTES REVISAR EL ARCHIVO QUE ESTA EN LA RAIZ estructura-db-supabase.md
+- ❌ NO SE DEBE HACER CAMBIOS A LA BASE DE DATOS DE SUPABASE TAL COMO AGREGAR TABLAS O CAMPOS , ETC , DESDE COMANDOS EN LA CONSOLA, YA QUE EL MCP DE SUPABASE ES DE SOLO LECTURA.
 
 ### Lo que SÍ se debe hacer:
 - ✅ Implementar exactamente lo solicitado
@@ -79,7 +81,9 @@ Basándome en la sección [X], implementaré [FUNCIONALIDAD] siguiendo [PATRÓN/
 - ✅ Usar los patrones ya establecidos en el proyecto
 - ✅ Solicitar clarificaciones cuando algo no esté claro
 - ✅ Revisar el código antes de enviarlo
-
+- ✅ Antes de sugerir o implementar cambios en las tablas o campos de la base de datos, se debe leer el archivo estructura-db-supabase.md que esta en la raiz del proyecto, para entender como esta compuesta toda la estructura de la base de datos.
+- ✅ Para hacer un cambio en la base de datos de Supabase, por ejemplo , agregar una tabla nueva , un campo, etc, me debes pasar el codigo SQL para ejectura en el SQL editor de Supabase.
+- ✅ Tener el codigo lo mas separado posible, es decir, agregar los componentes que sean necesarios , por ejemplo para botones, para tener un mayor control y el codigo limpio.
 ## 📋 Plantilla de Respuesta
 
 ### Antes de Implementar:

@@ -12,6 +12,7 @@ import {
   Image,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { X, Image as ImageIcon, Grid3X3 } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -21,7 +22,7 @@ import { notebookImages, getRandomNotebookImage } from '../constants/notebookIma
 interface CreateNotebookModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave?: (notebookData: NotebookFormData) => void;
+  onSave?: (notebookData: NotebookFormData) => Promise<void>;
 }
 
 interface NotebookFormData {
@@ -133,19 +134,33 @@ export const CreateNotebookModal: React.FC<CreateNotebookModalProps> = ({
         preset_image: undefined,
       });
       setShowPresetImages(false);
+      setErrors({});
+      setIsLoading(false);
     }, 200);
   };
 
-  const handleSave = () => {
-    if (formData.title.trim()) {
+  const handleSave = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
       // Si no se seleccionó imagen, usar una aleatoria
       const finalData = { ...formData };
       if (!finalData.cover_image && !finalData.preset_image) {
         const randomImage = getRandomNotebookImage();
         finalData.preset_image = randomImage.id;
       }
-      onSave?.(finalData);
+
+      await onSave?.(finalData);
       handleClose();
+    } catch (error) {
+      console.error('Error al crear cuaderno:', error);
+      // El error se manejará en el componente padre
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -225,45 +240,71 @@ export const CreateNotebookModal: React.FC<CreateNotebookModalProps> = ({
           {/* Form */}
           <View style={styles.form}>
             {/* Nombre del Cuaderno */}
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
-              ]}
-              placeholder="Nombre del Cuaderno"
-              placeholderTextColor={colors.textSecondary}
-              value={formData.title}
-              onChangeText={(text) =>
-                setFormData((prev) => ({ ...prev, title: text }))
-              }
-              maxLength={100}
-            />
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: errors.title ? '#EF4444' : colors.border,
+                    color: colors.text,
+                  },
+                ]}
+                placeholder="Nombre del Cuaderno"
+                placeholderTextColor={colors.textSecondary}
+                value={formData.title}
+                onChangeText={(text) => {
+                  setFormData((prev) => ({ ...prev, title: text }));
+                  if (errors.title) clearError('title');
+                }}
+                maxLength={100}
+                autoCapitalize="sentences"
+                returnKeyType="next"
+              />
+              {errors.title && (
+                <Text style={[styles.errorText, { color: '#EF4444' }]}>
+                  {errors.title}
+                </Text>
+              )}
+              <Text style={[styles.characterCount, { color: colors.textSecondary }]}>
+                {formData.title.length}/100
+              </Text>
+            </View>
 
             {/* Descripción Breve */}
-            <TextInput
-              style={[
-                styles.input,
-                styles.textArea,
-                {
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
-              ]}
-              placeholder="Descripción Breve"
-              placeholderTextColor={colors.textSecondary}
-              value={formData.description}
-              onChangeText={(text) =>
-                setFormData((prev) => ({ ...prev, description: text }))
-              }
-              multiline
-              numberOfLines={3}
-              maxLength={250}
-            />
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.textArea,
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: errors.description ? '#EF4444' : colors.border,
+                    color: colors.text,
+                  },
+                ]}
+                placeholder="Descripción Breve"
+                placeholderTextColor={colors.textSecondary}
+                value={formData.description}
+                onChangeText={(text) => {
+                  setFormData((prev) => ({ ...prev, description: text }));
+                  if (errors.description) clearError('description');
+                }}
+                multiline
+                numberOfLines={3}
+                maxLength={250}
+                autoCapitalize="sentences"
+                returnKeyType="done"
+              />
+              {errors.description && (
+                <Text style={[styles.errorText, { color: '#EF4444' }]}>
+                  {errors.description}
+                </Text>
+              )}
+              <Text style={[styles.characterCount, { color: colors.textSecondary }]}>
+                {formData.description.length}/250
+              </Text>
+            </View>
 
             {/* Selector de Imagen de Portada */}
             <View style={styles.imageSection}>
@@ -365,12 +406,21 @@ export const CreateNotebookModal: React.FC<CreateNotebookModalProps> = ({
                 styles.button,
                 styles.saveButton,
                 { backgroundColor: colors.accent },
-                !formData.title.trim() && styles.disabledButton,
+                (!formData.title.trim() || isLoading) && styles.disabledButton,
               ]}
               onPress={handleSave}
-              disabled={!formData.title.trim()}
+              disabled={!formData.title.trim() || isLoading}
             >
-              <Text style={styles.saveButtonText}>Crear Cuaderno</Text>
+              {isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text style={[styles.saveButtonText, { marginLeft: 8 }]}>
+                    Creando...
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.saveButtonText}>Crear Cuaderno</Text>
+              )}
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -412,6 +462,9 @@ const styles = StyleSheet.create({
   form: {
     gap: 20,
   },
+  inputContainer: {
+    gap: 6,
+  },
   input: {
     borderWidth: 1,
     borderRadius: 12,
@@ -422,6 +475,16 @@ const styles = StyleSheet.create({
   textArea: {
     height: 80,
     textAlignVertical: 'top',
+  },
+  errorText: {
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  characterCount: {
+    fontSize: 11,
+    textAlign: 'right',
+    marginTop: 2,
   },
   imageSection: {
     gap: 16,
@@ -522,5 +585,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
