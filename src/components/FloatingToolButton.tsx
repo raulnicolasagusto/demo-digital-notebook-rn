@@ -1,17 +1,19 @@
 import React, { useRef, useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import { Pencil, Type, Plus, Eraser, Save } from 'lucide-react-native';
+import { Pencil, Type, Plus, Eraser, Save, StickyNote } from 'lucide-react-native';
 
 interface FloatingToolButtonProps {
   isTextMode: boolean;
   isEraserMode: boolean;
-  onModeChange: (mode: 'draw' | 'text' | 'eraser') => void;
+  isNoteMode?: boolean;
+  onModeChange: (mode: 'draw' | 'text' | 'eraser' | 'note') => void;
   onSave?: () => void;
 }
 
 export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
   isTextMode,
   isEraserMode,
+  isNoteMode = false,
   onModeChange,
   onSave,
 }) => {
@@ -49,7 +51,7 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
     setIsExpanded(!isExpanded);
   };
 
-  const handleToolSelect = (tool: 'draw' | 'text' | 'eraser') => {
+  const handleToolSelect = (tool: 'draw' | 'text' | 'eraser' | 'note') => {
     onModeChange(tool);
     toggleTools(); // Close the menu after selection
   };
@@ -95,10 +97,10 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
             ]}
           >
             <TouchableOpacity 
-              style={[styles.toolOptionButton, !isTextMode && !isEraserMode && styles.toolOptionActive]}
+              style={[styles.toolOptionButton, !isTextMode && !isEraserMode && !isNoteMode && styles.toolOptionActive]}
               onPress={() => handleToolSelect('draw')}
             >
-              <Pencil size={20} color={!isTextMode && !isEraserMode ? "#FFFFFF" : "#6D28D9"} />
+              <Pencil size={20} color={!isTextMode && !isEraserMode && !isNoteMode ? "#FFFFFF" : "#6D28D9"} />
             </TouchableOpacity>
           </Animated.View>
 
@@ -135,6 +137,24 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
               onPress={() => handleToolSelect('text')}
             >
               <Type size={20} color={isTextMode ? "#FFFFFF" : "#6D28D9"} />
+            </TouchableOpacity>
+          </Animated.View>
+
+          <Animated.View 
+            style={[
+              styles.toolOption,
+              styles.toolOptionNote,
+              {
+                opacity: toolsOpacity,
+                transform: [{ scale: toolsScale }]
+              }
+            ]}
+          >
+            <TouchableOpacity 
+              style={[styles.toolOptionButton, isNoteMode && styles.toolOptionActive]}
+              onPress={() => handleToolSelect('note')}
+            >
+              <StickyNote size={20} color={isNoteMode ? "#FFFFFF" : "#6D28D9"} />
             </TouchableOpacity>
           </Animated.View>
         </>
@@ -197,8 +217,11 @@ const styles = StyleSheet.create({
   toolOptionText: {
     bottom: 200,
   },
-  toolOptionSave: {
+  toolOptionNote: {
     bottom: 260,
+  },
+  toolOptionSave: {
+    bottom: 320,
   },
   toolOptionButton: {
     width: 48,
