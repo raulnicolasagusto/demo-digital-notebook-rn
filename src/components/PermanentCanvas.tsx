@@ -31,7 +31,7 @@ export const PermanentCanvas: React.FC<PermanentCanvasProps> = React.memo(({
   if (paths.length === 0) return null;
   
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <View style={[StyleSheet.absoluteFill, { zIndex: 10 }]} pointerEvents="none">
       <Svg style={StyleSheet.absoluteFill}>
         {paths.map((pathData, index) => (
           <Path

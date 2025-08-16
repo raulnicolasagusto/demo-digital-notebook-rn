@@ -28,7 +28,7 @@ export const TemporalCanvas: React.FC<TemporalCanvasProps> = React.memo(({
   if (!currentPath) return null;
   
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <View style={[StyleSheet.absoluteFill, { zIndex: 10 }]} pointerEvents="none">
       <Svg style={StyleSheet.absoluteFill}>
         <Path
           d={currentPath}

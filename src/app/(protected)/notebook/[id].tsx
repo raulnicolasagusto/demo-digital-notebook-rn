@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react-native';
 import { FloatingToolButton } from '@/components/FloatingToolButton';
 import { CanvasDrawing } from '@/components/CanvasDrawing';
 import { CanvasText, createCanvasTextHandler } from '@/components/CanvasText';
+import { CanvasNoteImages } from '@/components/CanvasNoteImages';
 import { ResponsiveCanvas } from '@/components/ResponsiveCanvas';
 import { createSupabaseClientWithAuth } from '@/lib/supabase';
 
@@ -21,6 +22,15 @@ interface TextElement {
   y: number;
 }
 
+interface NoteImage {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  source: any; // Image source
+}
+
 export default function NotebookScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -29,9 +39,11 @@ export default function NotebookScreen() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [isTextMode, setIsTextMode] = useState(false);
   const [isEraserMode, setIsEraserMode] = useState(false);
+  const [isNoteMode, setIsNoteMode] = useState(false);
   const [currentPath, setCurrentPath] = useState('');
   const [paths, setPaths] = useState<DrawPath[]>([]);
   const [textElements, setTextElements] = useState<TextElement[]>([]);
+  const [noteImages, setNoteImages] = useState<NoteImage[]>([]);
   const [editingText, setEditingText] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -41,6 +53,22 @@ export default function NotebookScreen() {
     setTextElements,
     setEditingText
   );
+
+  // Handler for adding note images
+  const handleAddNoteImage = (x: number, y: number) => {
+    if (isNoteMode) {
+      const newNoteImage: NoteImage = {
+        id: Date.now().toString(),
+        x,
+        y,
+        width: 150,
+        height: 150,
+        source: require('@/assets/imagesPages/noteImage.png')
+      };
+      setNoteImages(prev => [...prev, newNoteImage]);
+      setIsNoteMode(false);
+    }
+  };
 
   // Función para cargar canvas desde la base de datos
   const loadCanvasData = async () => {
@@ -73,6 +101,14 @@ export default function NotebookScreen() {
         if (pageData.canvas_data.textElements) {
           setTextElements(pageData.canvas_data.textElements);
         }
+        if (pageData.canvas_data.noteImages) {
+          // Reconstruir noteImages con require() para las sources
+          const loadedNoteImages = pageData.canvas_data.noteImages.map((note: any) => ({
+            ...note,
+            source: require('@/assets/imagesPages/noteImage.png')
+          }));
+          setNoteImages(loadedNoteImages);
+        }
       }
     } catch (error) {
       console.error('Error loading canvas data:', error);
@@ -100,7 +136,15 @@ export default function NotebookScreen() {
       // Preparar datos del canvas
       const canvasData = {
         paths: paths,
-        textElements: textElements
+        textElements: textElements,
+        noteImages: noteImages.map(note => ({
+          id: note.id,
+          x: note.x,
+          y: note.y,
+          width: note.width,
+          height: note.height
+          // No guardamos 'source' ya que es siempre la misma imagen
+        }))
       };
 
       // Actualizar la página del cuaderno
@@ -146,6 +190,7 @@ export default function NotebookScreen() {
         <CanvasDrawing
           isTextMode={isTextMode}
           isEraserMode={isEraserMode}
+          isNoteMode={isNoteMode}
           isDrawing={isDrawing}
           setIsDrawing={setIsDrawing}
           currentPath={currentPath}
@@ -153,7 +198,14 @@ export default function NotebookScreen() {
           paths={paths}
           setPaths={setPaths}
           onCanvasPress={handleCanvasPress}
+          onNotePress={handleAddNoteImage}
         >
+          <CanvasNoteImages 
+            noteImages={noteImages}
+            onDeleteNote={(noteId) => {
+              setNoteImages(prev => prev.filter(note => note.id !== noteId));
+            }}
+          />
           <CanvasText
             isTextMode={isTextMode}
             textElements={textElements}
@@ -169,9 +221,11 @@ export default function NotebookScreen() {
       <FloatingToolButton
         isTextMode={isTextMode}
         isEraserMode={isEraserMode}
+        isNoteMode={isNoteMode}
         onModeChange={(mode) => {
           setIsTextMode(mode === 'text');
           setIsEraserMode(mode === 'eraser');
+          setIsNoteMode(mode === 'note');
         }}
         onSave={saveCanvasData}
       />

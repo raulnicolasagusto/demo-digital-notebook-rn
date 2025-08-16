@@ -17,6 +17,7 @@ interface DrawPath {
 interface CanvasDrawingProps {
   isTextMode: boolean;
   isEraserMode: boolean;
+  isNoteMode?: boolean;
   isDrawing: boolean;
   setIsDrawing: (drawing: boolean) => void;
   currentPath: string;
@@ -24,12 +25,14 @@ interface CanvasDrawingProps {
   paths: DrawPath[];
   setPaths: React.Dispatch<React.SetStateAction<DrawPath[]>>;
   onCanvasPress?: (evt: any) => void;
+  onNotePress?: (x: number, y: number) => void;
   children?: React.ReactNode;
 }
 
 export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
   isTextMode,
   isEraserMode,
+  isNoteMode = false,
   isDrawing,
   setIsDrawing,
   currentPath,
@@ -37,6 +40,7 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
   paths,
   setPaths,
   onCanvasPress,
+  onNotePress,
   children,
 }) => {
   const pathRef = useRef('');
@@ -159,10 +163,10 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
   };
 
   const panResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: () => !isTextMode,
-    onStartShouldSetPanResponder: () => !isTextMode,
+    onMoveShouldSetPanResponder: () => !isTextMode && !isNoteMode,
+    onStartShouldSetPanResponder: () => !isTextMode && !isNoteMode,
     onPanResponderGrant: (evt) => {
-      if (!isTextMode) {
+      if (!isTextMode && !isNoteMode) {
         const { locationX, locationY } = evt.nativeEvent;
         // Usar locationX/locationY que son coordenadas relativas al componente
         const canvasX = locationX;
@@ -204,7 +208,7 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
       }
     },
     onPanResponderMove: (evt) => {
-      if (!isTextMode && !isEraserMode && isDrawing) {
+      if (!isTextMode && !isEraserMode && !isNoteMode && isDrawing) {
         const { locationX, locationY } = evt.nativeEvent;
         // Usar locationX/locationY que son coordenadas relativas al componente
         const canvasX = locationX;
@@ -223,7 +227,7 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
         // Use batched update instead of immediate setState
         scheduleBatchUpdate(newPath);
         
-      } else if (!isTextMode && isEraserMode) {
+      } else if (!isTextMode && isEraserMode && !isNoteMode) {
         // Continue erasing while moving (keep original logic)
         const { locationX, locationY } = evt.nativeEvent;
         const canvasX = locationX;
@@ -252,7 +256,7 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
       }
     },
     onPanResponderRelease: () => {
-      if (!isTextMode && !isEraserMode && isDrawing && pathRef.current) {
+      if (!isTextMode && !isEraserMode && !isNoteMode && isDrawing && pathRef.current) {
         // 🚀 FASE 2: Ensure final update is processed + stroke smoothing
         if (animationFrameRef.current !== null) {
           cancelAnimationFrame(animationFrameRef.current);
@@ -293,7 +297,19 @@ export const CanvasDrawing: React.FC<CanvasDrawingProps> = ({
       ref={canvasViewRef}
       style={styles.canvas}
       {...panResponder.panHandlers}
-      onTouchStart={onCanvasPress}
+      onTouchStart={(evt) => {
+        // Handle note mode touch
+        if (isNoteMode && onNotePress) {
+          const { locationX, locationY } = evt.nativeEvent;
+          onNotePress(locationX, locationY);
+          return;
+        }
+        
+        // Handle other touch events
+        if (onCanvasPress) {
+          onCanvasPress(evt);
+        }
+      }}
     >
       {/* 🚀 FASE 2: Separación de capas optimizada */}
       
