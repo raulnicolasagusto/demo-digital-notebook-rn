@@ -12,6 +12,8 @@ import { PageNavigation } from '@/components/PageNavigation';
 import { createSupabaseClientWithAuth } from '@/lib/supabase';
 import * as NavigationBar from 'expo-navigation-bar';
 import { StatusBar } from 'expo-status-bar';
+import { BackgroundPicker } from '@/components/BackgroundPicker';
+import { CanvasBackground } from '@/components/CanvasBackground';
 
 interface DrawPath {
   path: string;
@@ -57,7 +59,11 @@ export default function NotebookScreen() {
 
   // Estados para navegación inmersiva
   const [isNavigationBarVisible, setIsNavigationBarVisible] = useState(false);
-  const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [hideTimeout, setHideTimeout] = useState<any>(null);
+
+  // Estados para fondo del canvas
+  const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
+  const [selectedBackground, setSelectedBackground] = useState<string | null>(null);
 
   // Create canvas text handler
   const handleCanvasPress = createCanvasTextHandler(
@@ -163,6 +169,7 @@ export default function NotebookScreen() {
           setPaths([]);
           setTextElements([]);
           setNoteImages([]);
+          setSelectedBackground(null);
         } else {
           console.log('Error loading canvas data:', error);
         }
@@ -192,6 +199,13 @@ export default function NotebookScreen() {
           setNoteImages(loadedNoteImages);
         } else {
           setNoteImages([]);
+        }
+
+        // Cargar fondo de la página
+        if (pageData.canvas_data.backgroundId) {
+          setSelectedBackground(pageData.canvas_data.backgroundId);
+        } else {
+          setSelectedBackground(null);
         }
       }
     } catch (error) {
@@ -230,7 +244,8 @@ export default function NotebookScreen() {
           width: note.width,
           height: note.height
           // No guardamos 'source' ya que es siempre la misma imagen
-        }))
+        })),
+        backgroundId: selectedBackground // Agregar fondo del canvas
       };
 
       // Usar upsert para crear o actualizar la página
@@ -285,6 +300,7 @@ export default function NotebookScreen() {
     setPaths([]);
     setTextElements([]);
     setNoteImages([]);
+    setSelectedBackground(null);
   };
 
   // Cargar datos al montar el componente
@@ -316,6 +332,12 @@ export default function NotebookScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color="#374151" />
         </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={() => setShowBackgroundPicker(true)} 
+          style={styles.backgroundButton}
+        >
+          <Text style={styles.backgroundButtonText}>Fondo</Text>
+        </TouchableOpacity>
         <Text style={styles.title}>Cuaderno {id}</Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -335,6 +357,11 @@ export default function NotebookScreen() {
           onCanvasPress={handleCanvasPress}
           onNotePress={handleAddNoteImage}
         >
+          <CanvasBackground
+            backgroundId={selectedBackground}
+            width={1280}
+            height={900}
+          />
           <CanvasNoteImages 
             noteImages={noteImages}
             onDeleteNote={(noteId) => {
@@ -386,6 +413,14 @@ export default function NotebookScreen() {
           );
         }}
       />
+
+      {/* Background Picker Modal */}
+      <BackgroundPicker
+        visible={showBackgroundPicker}
+        onClose={() => setShowBackgroundPicker(false)}
+        onSelectBackground={setSelectedBackground}
+        selectedBackground={selectedBackground}
+      />
     </View>
   );
 }
@@ -408,6 +443,18 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
+  },
+  backgroundButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#6D28D9',
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  backgroundButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
   title: {
     fontSize: 18,
