@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useUser, useAuth } from '@clerk/clerk-expo';
 import { ArrowLeft } from 'lucide-react-native';
@@ -8,7 +8,10 @@ import { CanvasDrawing } from '@/components/CanvasDrawing';
 import { CanvasText, createCanvasTextHandler } from '@/components/CanvasText';
 import { CanvasNoteImages } from '@/components/CanvasNoteImages';
 import { ResponsiveCanvas } from '@/components/ResponsiveCanvas';
+import { PageNavigation } from '@/components/PageNavigation';
 import { createSupabaseClientWithAuth } from '@/lib/supabase';
+import * as NavigationBar from 'expo-navigation-bar';
+import { StatusBar } from 'expo-status-bar';
 
 interface DrawPath {
   path: string;
@@ -46,6 +49,15 @@ export default function NotebookScreen() {
   const [noteImages, setNoteImages] = useState<NoteImage[]>([]);
   const [editingText, setEditingText] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Estados para manejo de páginas
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoadingPage, setIsLoadingPage] = useState(false);
+
+  // Estados para navegación inmersiva
+  const [isNavigationBarVisible, setIsNavigationBarVisible] = useState(false);
+  const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Create canvas text handler
   const handleCanvasPress = createCanvasTextHandler(
@@ -70,26 +82,90 @@ export default function NotebookScreen() {
     }
   };
 
-  // Función para cargar canvas desde la base de datos
-  const loadCanvasData = async () => {
+  // Funciones para navegación inmersiva
+  const setupImmersiveMode = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        // Configurar navegación inmersiva
+        await NavigationBar.setVisibilityAsync('hidden');
+        await NavigationBar.setBehaviorAsync('overlay-swipe');
+        setIsNavigationBarVisible(false);
+      } catch (error) {
+        console.log('Error setting up immersive mode:', error);
+      }
+    }
+  };
+
+  const showNavigationBar = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        await NavigationBar.setVisibilityAsync('visible');
+        setIsNavigationBarVisible(true);
+        
+        // Auto-ocultar después de 3 segundos
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+        }
+        
+        const timeout = setTimeout(async () => {
+          await NavigationBar.setVisibilityAsync('hidden');
+          setIsNavigationBarVisible(false);
+        }, 3000);
+        
+        setHideTimeout(timeout);
+      } catch (error) {
+        console.log('Error showing navigation bar:', error);
+      }
+    }
+  };
+
+  const handleScreenTouch = () => {
+    // Mostrar barra de navegación al tocar la pantalla
+    if (Platform.OS === 'android' && !isNavigationBarVisible) {
+      showNavigationBar();
+    }
+  };
+
+  // Función para cargar canvas de una página específica
+  const loadCanvasData = async (pageNumber: number = currentPage) => {
     try {
       if (!user || !id) return;
 
+      setIsLoadingPage(true);
       const token = await getToken();
       if (!token) return;
 
       const authenticatedSupabase = createSupabaseClientWithAuth(token);
 
-      // Obtener datos de la primera página del cuaderno
+      // Obtener total de páginas del cuaderno
+      const { data: pagesCount, error: countError } = await authenticatedSupabase
+        .from('notebook_pages')
+        .select('page_number')
+        .eq('notebook_id', id);
+
+      if (!countError && pagesCount) {
+        const maxPage = Math.max(...pagesCount.map(p => p.page_number));
+        setTotalPages(maxPage);
+      }
+
+      // Obtener datos de la página específica
       const { data: pageData, error } = await authenticatedSupabase
         .from('notebook_pages')
         .select('canvas_data')
         .eq('notebook_id', id)
-        .eq('page_number', 1)
+        .eq('page_number', pageNumber)
         .single();
 
       if (error) {
-        console.log('Error loading canvas data:', error);
+        // Si no existe la página, crear una vacía
+        if (error.code === 'PGRST116') {
+          console.log('Página no existe, creando página vacía');
+          setPaths([]);
+          setTextElements([]);
+          setNoteImages([]);
+        } else {
+          console.log('Error loading canvas data:', error);
+        }
         return;
       }
 
@@ -97,10 +173,16 @@ export default function NotebookScreen() {
         // Cargar paths y elementos de texto
         if (pageData.canvas_data.paths) {
           setPaths(pageData.canvas_data.paths);
+        } else {
+          setPaths([]);
         }
+        
         if (pageData.canvas_data.textElements) {
           setTextElements(pageData.canvas_data.textElements);
+        } else {
+          setTextElements([]);
         }
+        
         if (pageData.canvas_data.noteImages) {
           // Reconstruir noteImages con require() para las sources
           const loadedNoteImages = pageData.canvas_data.noteImages.map((note: any) => ({
@@ -108,15 +190,19 @@ export default function NotebookScreen() {
             source: require('@/assets/noteImage.png')
           }));
           setNoteImages(loadedNoteImages);
+        } else {
+          setNoteImages([]);
         }
       }
     } catch (error) {
       console.error('Error loading canvas data:', error);
+    } finally {
+      setIsLoadingPage(false);
     }
   };
 
-  // Función para guardar canvas en la base de datos
-  const saveCanvasData = async () => {
+  // Función para guardar canvas en la página actual
+  const saveCanvasData = async (pageNumber: number = currentPage) => {
     try {
       if (!user || !id) {
         Alert.alert('Error', 'No se puede guardar: datos de usuario faltantes');
@@ -147,35 +233,84 @@ export default function NotebookScreen() {
         }))
       };
 
-      // Actualizar la página del cuaderno
+      // Usar upsert para crear o actualizar la página
       const { error } = await authenticatedSupabase
         .from('notebook_pages')
-        .update({
+        .upsert({
+          notebook_id: id,
+          page_number: pageNumber,
           canvas_data: canvasData,
           updated_at: new Date().toISOString()
-        })
-        .eq('notebook_id', id)
-        .eq('page_number', 1);
+        }, {
+          onConflict: 'notebook_id,page_number'
+        });
 
       if (error) throw error;
 
-      Alert.alert('Guardado', 'Cuaderno guardado exitosamente');
+      Alert.alert('Guardado', `Página ${pageNumber} guardada exitosamente`);
 
     } catch (error: any) {
       console.error('Error saving canvas data:', error);
-      Alert.alert('Error', `No se pudo guardar el cuaderno: ${error.message}`);
+      Alert.alert('Error', `No se pudo guardar la página: ${error.message}`);
     } finally {
       setIsSaving(false);
     }
   };
 
+  // Función para cambiar de página
+  const handlePageChange = async (newPage: number) => {
+    if (newPage === currentPage || isLoadingPage) return;
+
+    // Guardar página actual antes de cambiar
+    await saveCanvasData(currentPage);
+    
+    // Cambiar a nueva página
+    setCurrentPage(newPage);
+    await loadCanvasData(newPage);
+  };
+
+  // Función para agregar una nueva página
+  const handleAddPage = async () => {
+    if (isLoadingPage) return;
+
+    // Guardar página actual
+    await saveCanvasData(currentPage);
+    
+    // Crear nueva página
+    const newPageNumber = totalPages + 1;
+    setTotalPages(newPageNumber);
+    setCurrentPage(newPageNumber);
+    
+    // Limpiar canvas para nueva página
+    setPaths([]);
+    setTextElements([]);
+    setNoteImages([]);
+  };
+
   // Cargar datos al montar el componente
   useEffect(() => {
-    loadCanvasData();
+    loadCanvasData(1); // Cargar primera página
   }, [user, id]);
 
+  // Configurar modo inmersivo
+  useEffect(() => {
+    setupImmersiveMode();
+    
+    // Limpiar timeout al desmontar
+    return () => {
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+      }
+      // Restaurar navegación normal al salir
+      if (Platform.OS === 'android') {
+        NavigationBar.setVisibilityAsync('visible').catch(() => {});
+      }
+    };
+  }, []);
+
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onTouchStart={handleScreenTouch}>
+      <StatusBar style="auto" />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -217,6 +352,14 @@ export default function NotebookScreen() {
         </CanvasDrawing>
       </ResponsiveCanvas>
 
+      {/* Page Navigation */}
+      <PageNavigation
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        onAddPage={handleAddPage}
+      />
+
       {/* Floating Tool Button */}
       <FloatingToolButton
         isTextMode={isTextMode}
@@ -227,7 +370,7 @@ export default function NotebookScreen() {
           setIsEraserMode(mode === 'eraser');
           setIsNoteMode(mode === 'note');
         }}
-        onSave={saveCanvasData}
+        onSave={() => saveCanvasData(currentPage)}
         onClearNotes={() => {
           Alert.alert(
             'Limpiar Notas',
@@ -251,6 +394,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F3F4F6',
+    paddingBottom: Platform.OS === 'android' ? 0 : 0, // Sin padding adicional en modo inmersivo
   },
   header: {
     flexDirection: 'row',
