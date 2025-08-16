@@ -21,7 +21,7 @@ export const CustomScrollBar: React.FC<CustomScrollBarProps> = ({
   
   // Calcular el tamaño de la barra thumb basado en la proporción
   const scrollRatio = viewportSize / canvasSize;
-  const thumbSize = Math.max(scrollRatio * (isHorizontal ? 200 : 150), 30);
+  const thumbSize = 25; // Tamaño fijo de 25px para puntos circulares
   const trackSize = isHorizontal ? 200 : 150;
   const maxThumbPosition = trackSize - thumbSize;
   
@@ -124,18 +124,20 @@ const styles = StyleSheet.create({
   // Thumb horizontal
   horizontalThumb: {
     position: 'absolute',
-    height: 12,
+    height: 20,
+    width: 20,
     backgroundColor: '#2563EB',
-    borderRadius: 4,
-    top: 0,
+    borderRadius: 10, // Hace que sea completamente redondo
+    top: -4, // Centrar verticalmente en el track
   },
   
   // Thumb vertical
   verticalThumb: {
     position: 'absolute',
-    width: 10,
+    width: 20,
+    height: 20,
     backgroundColor: '#2563EB',
-    borderRadius: 4,
-    left: 0,
+    borderRadius: 10, // Hace que sea completamente redondo
+    left: -6, // Centrar horizontalmente en el track
   },
 });

@@ -61,9 +61,9 @@ export default function NotebookScreen() {
         id: Date.now().toString(),
         x,
         y,
-        width: 150,
-        height: 150,
-        source: require('@/assets/imagesPages/noteImage.png')
+        width: 200,
+        height: 200,
+        source: require('@/assets/noteImage.png')
       };
       setNoteImages(prev => [...prev, newNoteImage]);
       setIsNoteMode(false);
@@ -105,7 +105,7 @@ export default function NotebookScreen() {
           // Reconstruir noteImages con require() para las sources
           const loadedNoteImages = pageData.canvas_data.noteImages.map((note: any) => ({
             ...note,
-            source: require('@/assets/imagesPages/noteImage.png')
+            source: require('@/assets/noteImage.png')
           }));
           setNoteImages(loadedNoteImages);
         }
@@ -228,6 +228,20 @@ export default function NotebookScreen() {
           setIsNoteMode(mode === 'note');
         }}
         onSave={saveCanvasData}
+        onClearNotes={() => {
+          Alert.alert(
+            'Limpiar Notas',
+            '¿Estás seguro de que quieres eliminar todas las notas?',
+            [
+              { text: 'Cancelar', style: 'cancel' },
+              { 
+                text: 'Eliminar', 
+                style: 'destructive',
+                onPress: () => setNoteImages([])
+              }
+            ]
+          );
+        }}
       />
     </View>
   );

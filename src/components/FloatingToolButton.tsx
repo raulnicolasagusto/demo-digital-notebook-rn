@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import { Pencil, Type, Plus, Eraser, Save, StickyNote } from 'lucide-react-native';
+import { Pencil, Type, Plus, Eraser, Save, StickyNote, Trash2 } from 'lucide-react-native';
 
 interface FloatingToolButtonProps {
   isTextMode: boolean;
@@ -8,6 +8,7 @@ interface FloatingToolButtonProps {
   isNoteMode?: boolean;
   onModeChange: (mode: 'draw' | 'text' | 'eraser' | 'note') => void;
   onSave?: () => void;
+  onClearNotes?: () => void;
 }
 
 export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
@@ -16,6 +17,7 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
   isNoteMode = false,
   onModeChange,
   onSave,
+  onClearNotes,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
@@ -63,6 +65,13 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
     toggleTools(); // Close the menu after save
   };
 
+  const handleClearNotes = () => {
+    if (onClearNotes) {
+      onClearNotes();
+    }
+    toggleTools(); // Close the menu after clear
+  };
+
   return (
     <View style={styles.floatingButtonContainer}>
       {/* Tool Options */}
@@ -83,6 +92,24 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
               onPress={handleSave}
             >
               <Save size={20} color="#6D28D9" />
+            </TouchableOpacity>
+          </Animated.View>
+
+          <Animated.View 
+            style={[
+              styles.toolOption,
+              styles.toolOptionClearNotes,
+              {
+                opacity: toolsOpacity,
+                transform: [{ scale: toolsScale }]
+              }
+            ]}
+          >
+            <TouchableOpacity 
+              style={styles.toolOptionButton}
+              onPress={handleClearNotes}
+            >
+              <Trash2 size={20} color="#DC2626" />
             </TouchableOpacity>
           </Animated.View>
 
@@ -222,6 +249,9 @@ const styles = StyleSheet.create({
   },
   toolOptionSave: {
     bottom: 320,
+  },
+  toolOptionClearNotes: {
+    bottom: 380,
   },
   toolOptionButton: {
     width: 48,
