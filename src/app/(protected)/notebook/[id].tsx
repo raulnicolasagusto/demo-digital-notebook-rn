@@ -7,7 +7,7 @@ import { FloatingToolButton } from '@/components/FloatingToolButton';
 import { CanvasDrawing } from '@/components/CanvasDrawing';
 import { CanvasText, createCanvasTextHandler } from '@/components/CanvasText';
 import { CanvasNoteImages } from '@/components/CanvasNoteImages';
-import { ResponsiveCanvas } from '@/components/ResponsiveCanvas';
+import { ResponsiveCanvas, CanvasViewInfo } from '@/components/ResponsiveCanvas';
 import { PageNavigation } from '@/components/PageNavigation';
 import { createSupabaseClientWithAuth } from '@/lib/supabase';
 import * as NavigationBar from 'expo-navigation-bar';
@@ -66,6 +66,15 @@ export default function NotebookScreen() {
   // Estados para fondo del canvas
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
   const [selectedBackground, setSelectedBackground] = useState<string | null>(null);
+
+  // Estado para información del canvas view
+  const [canvasViewInfo, setCanvasViewInfo] = useState<CanvasViewInfo>({
+    containerWidth: 0,
+    containerHeight: 0,
+    canvasDisplayWidth: 960,
+    canvasDisplayHeight: 1200,
+    scale: 1.0
+  });
 
   // Referencia para el handler de la lupa
   const magnifyingGlassHandler = useRef<((x: number, y: number) => void) | null>(null);
@@ -353,6 +362,7 @@ export default function NotebookScreen() {
         pathsLength={paths.length}
         textElementsLength={textElements.length}
         isMagnifyingGlassMode={isMagnifyingGlassMode}
+        onCanvasViewInfoChange={setCanvasViewInfo}
         onMagnifyingGlassTouch={(x, y) => {
           // Llamar al handler registrado por MagnifyingGlassTool
           if (magnifyingGlassHandler.current) {
@@ -450,6 +460,9 @@ export default function NotebookScreen() {
         canvasPaths={paths}
         canvasScale={1.0}
         canvasOffset={{ x: 0, y: 0 }}
+        isTablet={true} // Temporal - debería detectarse automáticamente
+        scrollPosition={{ x: 0, y: 0 }} // Para dispositivos con scroll
+        canvasViewInfo={canvasViewInfo}
         onCanvasTouchHandler={(handler: (x: number, y: number) => void) => {
           magnifyingGlassHandler.current = handler;
         }}

@@ -1,8 +1,16 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, useWindowDimensions, ScrollView, TouchableWithoutFeedback } from 'react-native';
 import { CanvasPerformanceOptimizer } from './CanvasPerformanceOptimizer';
 import { CustomScrollBar } from './CustomScrollBar';
 import { PressHoldCanvas } from './PressHoldCanvas';
+
+export interface CanvasViewInfo {
+  containerWidth: number;
+  containerHeight: number;
+  canvasDisplayWidth: number;
+  canvasDisplayHeight: number;
+  scale: number;
+}
 
 interface ResponsiveCanvasProps {
   children: React.ReactNode;
@@ -10,6 +18,7 @@ interface ResponsiveCanvasProps {
   textElementsLength?: number; // Para optimización de rendimiento
   isMagnifyingGlassMode?: boolean; // Para el modo lupa
   onMagnifyingGlassTouch?: (x: number, y: number) => void; // Handler para toques de lupa
+  onCanvasViewInfoChange?: (info: CanvasViewInfo) => void; // Handler para información del canvas
 }
 
 export const ResponsiveCanvas: React.FC<ResponsiveCanvasProps> = ({ 
@@ -17,7 +26,8 @@ export const ResponsiveCanvas: React.FC<ResponsiveCanvasProps> = ({
   pathsLength = 0, 
   textElementsLength = 0,
   isMagnifyingGlassMode = false,
-  onMagnifyingGlassTouch
+  onMagnifyingGlassTouch,
+  onCanvasViewInfoChange
 }) => {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
@@ -46,30 +56,75 @@ export const ResponsiveCanvas: React.FC<ResponsiveCanvasProps> = ({
   const handlePressHoldScroll = useCallback((newScrollX: number, newScrollY: number) => {
     setScrollX(newScrollX);
     setScrollY(newScrollY);
-  }, []);  // Para tablets modernas (≥1280px): Canvas directo sin barras
+  }, []);
+
+  // Calcular información del canvas para ambos modos
+  let canvasInfo: CanvasViewInfo;
+  
   if (isModernTablet) {
     const availableWidth = screenWidth - 40;
     const availableHeight = screenHeight - 140;
-    
-    // Calcular escala manteniendo proporción
     const scale = Math.min(
       availableWidth / CANVAS_WIDTH,
       availableHeight / CANVAS_HEIGHT,
-      1.0 // No agrandar más del tamaño original
+      1.0
     );
-    
     const finalWidth = CANVAS_WIDTH * scale;
     const finalHeight = CANVAS_HEIGHT * scale;
     
+    canvasInfo = {
+      containerWidth: screenWidth,
+      containerHeight: screenHeight,
+      canvasDisplayWidth: finalWidth,
+      canvasDisplayHeight: finalHeight,
+      scale
+    };
+  } else {
+    canvasInfo = {
+      containerWidth: screenWidth,
+      containerHeight: screenHeight,
+      canvasDisplayWidth: CANVAS_WIDTH,
+      canvasDisplayHeight: CANVAS_HEIGHT,
+      scale: 1.0
+    };
+  }
+
+  // Notificar cambios en la información del canvas
+  useEffect(() => {
+    if (onCanvasViewInfoChange) {
+      onCanvasViewInfoChange(canvasInfo);
+    }
+  }, [screenWidth, screenHeight, isModernTablet]);
+
+  // Para tablets modernas (≥1280px): Canvas directo sin barras
+  if (isModernTablet) {
     return (
       <View style={styles.modernTabletContainer}>
         <TouchableWithoutFeedback 
           onPress={(evt) => {
             if (isMagnifyingGlassMode && onMagnifyingGlassTouch) {
               const { locationX, locationY } = evt.nativeEvent;
-              // Convertir las coordenadas de la pantalla a coordenadas del canvas
-              const canvasX = (locationX / scale);
-              const canvasY = (locationY / scale);
+              
+              // Calcular el offset del canvas centrado
+              const containerOffsetX = (screenWidth - canvasInfo.canvasDisplayWidth) / 2;
+              const containerOffsetY = (screenHeight - 140 - canvasInfo.canvasDisplayHeight) / 2; // 140 por header y padding
+              
+              // Ajustar las coordenadas del toque considerando el offset del container
+              const adjustedX = locationX - containerOffsetX;
+              const adjustedY = locationY - containerOffsetY;
+              
+              // Convertir las coordenadas considerando la escala
+              const canvasX = Math.max(0, Math.min(adjustedX / canvasInfo.scale, CANVAS_WIDTH));
+              const canvasY = Math.max(0, Math.min(adjustedY / canvasInfo.scale, CANVAS_HEIGHT));
+              
+              console.log('Tablet touch:', { 
+                raw: { locationX, locationY }, 
+                container: { containerOffsetX, containerOffsetY },
+                adjusted: { adjustedX, adjustedY },
+                canvas: { canvasX, canvasY },
+                scale: canvasInfo.scale
+              });
+              
               onMagnifyingGlassTouch(canvasX, canvasY);
             }
           }}
@@ -77,14 +132,14 @@ export const ResponsiveCanvas: React.FC<ResponsiveCanvasProps> = ({
           <View style={[
             styles.canvasContainer,
             {
-              width: finalWidth,
-              height: finalHeight,
+              width: canvasInfo.canvasDisplayWidth,
+              height: canvasInfo.canvasDisplayHeight,
             }
           ]}>
             <View style={{
               width: CANVAS_WIDTH,
               height: CANVAS_HEIGHT,
-              transform: [{ scale: scale }],
+              transform: [{ scale: canvasInfo.scale }],
               transformOrigin: 'top left',
             }}>
               <CanvasPerformanceOptimizer

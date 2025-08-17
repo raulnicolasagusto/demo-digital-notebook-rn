@@ -26,6 +26,16 @@ interface ZoomWindowSimpleProps {
   canvasScale: number;
   canvasOffset: { x: number; y: number };
   onCanvasTouchHandler?: (handler: (x: number, y: number) => void) => void;
+  // Nuevas props para posicionamiento correcto
+  isTablet?: boolean;
+  scrollPosition?: { x: number; y: number };
+  canvasViewInfo?: {
+    containerWidth: number;
+    containerHeight: number;
+    canvasDisplayWidth: number;
+    canvasDisplayHeight: number;
+    scale: number;
+  };
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -42,23 +52,28 @@ export const ZoomWindowSimple: React.FC<ZoomWindowSimpleProps> = ({
   canvasPaths,
   canvasScale,
   canvasOffset,
-  onCanvasTouchHandler
+  onCanvasTouchHandler,
+  isTablet = false,
+  scrollPosition = { x: 0, y: 0 },
+  canvasViewInfo
 }) => {
   const [selectedArea, setSelectedArea] = useState<{ x: number; y: number } | null>(null);
   const [showInstructions, setShowInstructions] = useState(true);
   const [zoomPaths, setZoomPaths] = useState<DrawPath[]>([]);
   const [currentPath, setCurrentPath] = useState('');
   const [isDrawing, setIsDrawing] = useState(false);
+  // Estado para el recuadro guía que siempre se muestra
+  const [guideRect, setGuideRect] = useState<{ x: number; y: number } | null>({ x: canvasWidth / 2, y: canvasHeight / 2 });
 
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
 
   useEffect(() => {
+    // Siempre registrar el handler para toques del canvas (para el recuadro guía)
+    if (onCanvasTouchHandler) {
+      onCanvasTouchHandler(handleCanvasTouch);
+    }
+    
     if (isActive) {
-      // Registrar el handler para toques del canvas
-      if (onCanvasTouchHandler) {
-        onCanvasTouchHandler(handleCanvasTouch);
-      }
-      
       // Auto-cerrar las instrucciones después de 3 segundos
       const instructionTimeout = setTimeout(() => {
         if (showInstructions) {
@@ -112,7 +127,11 @@ export const ZoomWindowSimple: React.FC<ZoomWindowSimpleProps> = ({
   }, [selectedArea, canvasPaths]);
 
   const handleCanvasTouch = (x: number, y: number) => {
-    if (!selectedArea) {
+    // Siempre actualizar el recuadro guía, sin importar el estado
+    setGuideRect({ x, y });
+    
+    // Si el modo lupa está activo, actualizar el área seleccionada
+    if (isActive) {
       setSelectedArea({ x, y });
       setShowInstructions(false);
     }
@@ -293,6 +312,45 @@ export const ZoomWindowSimple: React.FC<ZoomWindowSimpleProps> = ({
   const selectNewArea = () => {
     setSelectedArea(null);
     setShowInstructions(true);
+    setZoomPaths([]);
+  };
+
+  // Calcular la posición del indicador considerando escala y scroll
+  const getIndicatorPosition = () => {
+    if (!selectedArea) return { left: 0, top: 0 };
+    
+    if (isTablet && canvasViewInfo) {
+      // Para tablets: considerar escala y centrado
+      const { containerWidth, containerHeight, canvasDisplayWidth, canvasDisplayHeight, scale } = canvasViewInfo;
+      const containerOffsetX = (containerWidth - canvasDisplayWidth) / 2;
+      const containerOffsetY = (containerHeight - canvasDisplayHeight) / 2;
+      
+      const displayX = (selectedArea.x * scale) + containerOffsetX;
+      const displayY = (selectedArea.y * scale) + containerOffsetY;
+      
+      return {
+        left: displayX - (AREA_SIZE * scale) / 2,
+        top: displayY - (AREA_SIZE * scale) / 2,
+      };
+    } else {
+      // Para dispositivos pequeños: considerar scroll
+      const displayX = selectedArea.x - scrollPosition.x;
+      const displayY = selectedArea.y - scrollPosition.y;
+      
+      return {
+        left: displayX - AREA_SIZE / 2,
+        top: displayY - AREA_SIZE / 2,
+      };
+    }
+  };
+
+  // Calcular el tamaño del indicador considerando escala
+  const getIndicatorSize = () => {
+    if (isTablet && canvasViewInfo) {
+      const scaledSize = AREA_SIZE * canvasViewInfo.scale;
+      return { width: scaledSize, height: scaledSize };
+    }
+    return { width: AREA_SIZE, height: AREA_SIZE };
   };
 
   if (!isActive) return null;
@@ -312,20 +370,20 @@ export const ZoomWindowSimple: React.FC<ZoomWindowSimpleProps> = ({
         </View>
       )}
 
-      {/* Indicador de área seleccionada en el canvas */}
-      {selectedArea && (
+      {/* Indicador de área que siempre se muestra */}
+      {guideRect && (
         <View 
           style={[
             styles.selectedAreaIndicator,
             {
-              left: selectedArea.x - AREA_SIZE / 2,
-              top: selectedArea.y - AREA_SIZE / 2,
+              left: guideRect.x - AREA_SIZE / 2,
+              top: guideRect.y - AREA_SIZE / 2,
               width: AREA_SIZE,
               height: AREA_SIZE,
             }
           ]}
         >
-          <View style={styles.areaFrame} />
+          <View style={[styles.areaFrame, isActive && selectedArea ? {} : styles.guideFrame]} />
         </View>
       )}
 
@@ -467,6 +525,13 @@ const styles = StyleSheet.create({
     borderColor: '#6D28D9',
     borderRadius: 8,
     backgroundColor: 'rgba(109, 40, 217, 0.1)',
+  },
+  guideFrame: {
+    borderWidth: 1,
+    borderColor: '#9CA3AF',
+    borderRadius: 6,
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(156, 163, 175, 0.05)',
   },
   zoomPanel: {
     position: 'absolute',

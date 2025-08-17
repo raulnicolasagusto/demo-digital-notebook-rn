@@ -64,8 +64,17 @@ export const PressHoldCanvas: React.FC<PressHoldCanvasProps> = ({
       // Si está en modo lupa, manejar el toque para selección de área
       if (isMagnifyingGlassMode && onMagnifyingGlassTouch) {
         const { locationX, locationY } = evt.nativeEvent;
+        // Convertir coordenadas del viewport a coordenadas del canvas
         const canvasX = Math.max(0, Math.min(locationX + scrollX, canvasWidth));
         const canvasY = Math.max(0, Math.min(locationY + scrollY, canvasHeight));
+        
+        console.log('Small device touch:', { 
+          raw: { locationX, locationY }, 
+          scroll: { scrollX, scrollY },
+          canvas: { canvasX, canvasY },
+          viewport: { viewportWidth, viewportHeight }
+        });
+        
         onMagnifyingGlassTouch(canvasX, canvasY);
         return;
       }
