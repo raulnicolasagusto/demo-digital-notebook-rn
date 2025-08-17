@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, useWindowDimensions, ScrollView } from 'react-native';
 import { CanvasPerformanceOptimizer } from './CanvasPerformanceOptimizer';
 import { CustomScrollBar } from './CustomScrollBar';
+import { PressHoldCanvas } from './PressHoldCanvas';
 
 interface ResponsiveCanvasProps {
   children: React.ReactNode;
@@ -35,6 +36,12 @@ export const ResponsiveCanvas: React.FC<ResponsiveCanvasProps> = ({
   
   const handleVerticalScroll = useCallback((offset: number) => {
     setScrollY(offset);
+  }, []);
+
+  // Handler para cambios de scroll desde PressHoldCanvas
+  const handlePressHoldScroll = useCallback((newScrollX: number, newScrollY: number) => {
+    setScrollX(newScrollX);
+    setScrollY(newScrollY);
   }, []);  // Para tablets modernas (≥1280px): Canvas directo sin barras
   if (isModernTablet) {
     const availableWidth = screenWidth - 40;
@@ -112,47 +119,31 @@ export const ResponsiveCanvas: React.FC<ResponsiveCanvasProps> = ({
           marginTop: 20,
         }
       ]}>
-        <ScrollView
-          horizontal={true}
-          showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={false}
-          scrollEventThrottle={16}
-          contentOffset={{ x: scrollX, y: scrollY }}
-          onScroll={(event) => {
-            setScrollX(event.nativeEvent.contentOffset.x);
-            setScrollY(event.nativeEvent.contentOffset.y);
-          }}
-          contentContainerStyle={{
-            width: CANVAS_WIDTH,
-            height: CANVAS_HEIGHT,
-          }}
+        <PressHoldCanvas
+          canvasWidth={CANVAS_WIDTH}
+          canvasHeight={CANVAS_HEIGHT}
+          viewportWidth={viewportWidth}
+          viewportHeight={viewportHeight}
+          scrollX={scrollX}
+          scrollY={scrollY}
+          onScrollChange={handlePressHoldScroll}
         >
-          <ScrollView
-            showsHorizontalScrollIndicator={false}
-            showsVerticalScrollIndicator={false}
-            scrollEventThrottle={16}
-            contentContainerStyle={{
+          <View style={[
+            styles.canvasContainer,
+            {
               width: CANVAS_WIDTH,
               height: CANVAS_HEIGHT,
-            }}
-          >
-            <View style={[
-              styles.canvasContainer,
-              {
-                width: CANVAS_WIDTH,
-                height: CANVAS_HEIGHT,
-              }
-            ]}>
-              <CanvasPerformanceOptimizer
-                pathsLength={pathsLength}
-                textElementsLength={textElementsLength}
-                zoomLevel={1}
-              >
-                {children}
-              </CanvasPerformanceOptimizer>
-            </View>
-          </ScrollView>
-        </ScrollView>
+            }
+          ]}>
+            <CanvasPerformanceOptimizer
+              pathsLength={pathsLength}
+              textElementsLength={textElementsLength}
+              zoomLevel={1}
+            >
+              {children}
+            </CanvasPerformanceOptimizer>
+          </View>
+        </PressHoldCanvas>
       </View>
     </View>
   );
