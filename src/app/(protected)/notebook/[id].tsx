@@ -14,6 +14,7 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { StatusBar } from 'expo-status-bar';
 import { BackgroundPicker } from '@/components/BackgroundPicker';
 import { CanvasBackground } from '@/components/CanvasBackground';
+import { ZoomWindowSimple as ZoomWindow } from '@/components/ZoomWindow_Simple';
 
 interface DrawPath {
   path: string;
@@ -45,6 +46,7 @@ export default function NotebookScreen() {
   const [isTextMode, setIsTextMode] = useState(false);
   const [isEraserMode, setIsEraserMode] = useState(false);
   const [isNoteMode, setIsNoteMode] = useState(false);
+  const [isMagnifyingGlassMode, setIsMagnifyingGlassMode] = useState(false);
   const [currentPath, setCurrentPath] = useState('');
   const [paths, setPaths] = useState<DrawPath[]>([]);
   const [textElements, setTextElements] = useState<TextElement[]>([]);
@@ -64,6 +66,9 @@ export default function NotebookScreen() {
   // Estados para fondo del canvas
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
   const [selectedBackground, setSelectedBackground] = useState<string | null>(null);
+
+  // Referencia para el handler de la lupa
+  const magnifyingGlassHandler = useRef<((x: number, y: number) => void) | null>(null);
 
   // Create canvas text handler
   const handleCanvasPress = createCanvasTextHandler(
@@ -344,7 +349,17 @@ export default function NotebookScreen() {
       </View>
 
       {/* Responsive Canvas Container */}
-      <ResponsiveCanvas>
+      <ResponsiveCanvas
+        pathsLength={paths.length}
+        textElementsLength={textElements.length}
+        isMagnifyingGlassMode={isMagnifyingGlassMode}
+        onMagnifyingGlassTouch={(x, y) => {
+          // Llamar al handler registrado por MagnifyingGlassTool
+          if (magnifyingGlassHandler.current) {
+            magnifyingGlassHandler.current(x, y);
+          }
+        }}
+      >
         <CanvasDrawing
           isTextMode={isTextMode}
           isEraserMode={isEraserMode}
@@ -393,10 +408,12 @@ export default function NotebookScreen() {
         isTextMode={isTextMode}
         isEraserMode={isEraserMode}
         isNoteMode={isNoteMode}
+        isMagnifyingGlassMode={isMagnifyingGlassMode}
         onModeChange={(mode) => {
           setIsTextMode(mode === 'text');
           setIsEraserMode(mode === 'eraser');
           setIsNoteMode(mode === 'note');
+          setIsMagnifyingGlassMode(mode === 'magnifyingGlass');
         }}
         onSave={() => saveCanvasData(currentPage)}
         onClearNotes={() => {
@@ -421,6 +438,21 @@ export default function NotebookScreen() {
         onClose={() => setShowBackgroundPicker(false)}
         onSelectBackground={setSelectedBackground}
         selectedBackground={selectedBackground}
+      />
+
+      {/* Zoom Window Tool */}
+      <ZoomWindow
+        isActive={isMagnifyingGlassMode}
+        onClose={() => setIsMagnifyingGlassMode(false)}
+        onDrawingUpdate={(newPaths: DrawPath[]) => setPaths(newPaths)}
+        canvasWidth={960}
+        canvasHeight={1200}
+        canvasPaths={paths}
+        canvasScale={1.0}
+        canvasOffset={{ x: 0, y: 0 }}
+        onCanvasTouchHandler={(handler: (x: number, y: number) => void) => {
+          magnifyingGlassHandler.current = handler;
+        }}
       />
     </View>
   );

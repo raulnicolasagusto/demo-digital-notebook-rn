@@ -10,6 +10,8 @@ interface PressHoldCanvasProps {
   scrollX: number;
   scrollY: number;
   onScrollChange: (scrollX: number, scrollY: number) => void;
+  isMagnifyingGlassMode?: boolean;
+  onMagnifyingGlassTouch?: (x: number, y: number) => void;
 }
 
 export const PressHoldCanvas: React.FC<PressHoldCanvasProps> = ({
@@ -21,6 +23,8 @@ export const PressHoldCanvas: React.FC<PressHoldCanvasProps> = ({
   scrollX,
   scrollY,
   onScrollChange,
+  isMagnifyingGlassMode = false,
+  onMagnifyingGlassTouch
 }) => {
   const pan = useRef(new Animated.ValueXY({ x: -scrollX, y: -scrollY })).current;
   const [isHoldActive, setIsHoldActive] = useState(false);
@@ -54,9 +58,18 @@ export const PressHoldCanvas: React.FC<PressHoldCanvasProps> = ({
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => isHoldActive,
+    onMoveShouldSetPanResponder: () => isHoldActive || isMagnifyingGlassMode,
 
     onPanResponderGrant: (evt, gestureState) => {
+      // Si está en modo lupa, manejar el toque para selección de área
+      if (isMagnifyingGlassMode && onMagnifyingGlassTouch) {
+        const { locationX, locationY } = evt.nativeEvent;
+        const canvasX = Math.max(0, Math.min(locationX + scrollX, canvasWidth));
+        const canvasY = Math.max(0, Math.min(locationY + scrollY, canvasHeight));
+        onMagnifyingGlassTouch(canvasX, canvasY);
+        return;
+      }
+
       // Para dos dedos, activar inmediatamente
       if (evt.nativeEvent.touches.length >= 2) {
         setIsHoldActive(true);

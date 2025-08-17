@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, useWindowDimensions, ScrollView } from 'react-native';
+import { View, StyleSheet, useWindowDimensions, ScrollView, TouchableWithoutFeedback } from 'react-native';
 import { CanvasPerformanceOptimizer } from './CanvasPerformanceOptimizer';
 import { CustomScrollBar } from './CustomScrollBar';
 import { PressHoldCanvas } from './PressHoldCanvas';
@@ -8,12 +8,16 @@ interface ResponsiveCanvasProps {
   children: React.ReactNode;
   pathsLength?: number;        // Para optimización de rendimiento
   textElementsLength?: number; // Para optimización de rendimiento
+  isMagnifyingGlassMode?: boolean; // Para el modo lupa
+  onMagnifyingGlassTouch?: (x: number, y: number) => void; // Handler para toques de lupa
 }
 
 export const ResponsiveCanvas: React.FC<ResponsiveCanvasProps> = ({ 
   children, 
   pathsLength = 0, 
-  textElementsLength = 0 
+  textElementsLength = 0,
+  isMagnifyingGlassMode = false,
+  onMagnifyingGlassTouch
 }) => {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
@@ -59,28 +63,40 @@ export const ResponsiveCanvas: React.FC<ResponsiveCanvasProps> = ({
     
     return (
       <View style={styles.modernTabletContainer}>
-        <View style={[
-          styles.canvasContainer,
-          {
-            width: finalWidth,
-            height: finalHeight,
-          }
-        ]}>
-          <View style={{
-            width: CANVAS_WIDTH,
-            height: CANVAS_HEIGHT,
-            transform: [{ scale: scale }],
-            transformOrigin: 'top left',
-          }}>
-            <CanvasPerformanceOptimizer
-              pathsLength={pathsLength}
-              textElementsLength={textElementsLength}
-              zoomLevel={1}
-            >
-              {children}
-            </CanvasPerformanceOptimizer>
+        <TouchableWithoutFeedback 
+          onPress={(evt) => {
+            if (isMagnifyingGlassMode && onMagnifyingGlassTouch) {
+              const { locationX, locationY } = evt.nativeEvent;
+              // Convertir las coordenadas de la pantalla a coordenadas del canvas
+              const canvasX = (locationX / scale);
+              const canvasY = (locationY / scale);
+              onMagnifyingGlassTouch(canvasX, canvasY);
+            }
+          }}
+        >
+          <View style={[
+            styles.canvasContainer,
+            {
+              width: finalWidth,
+              height: finalHeight,
+            }
+          ]}>
+            <View style={{
+              width: CANVAS_WIDTH,
+              height: CANVAS_HEIGHT,
+              transform: [{ scale: scale }],
+              transformOrigin: 'top left',
+            }}>
+              <CanvasPerformanceOptimizer
+                pathsLength={pathsLength}
+                textElementsLength={textElementsLength}
+                zoomLevel={1}
+              >
+                {children}
+              </CanvasPerformanceOptimizer>
+            </View>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </View>
     );
   }
@@ -127,6 +143,8 @@ export const ResponsiveCanvas: React.FC<ResponsiveCanvasProps> = ({
           scrollX={scrollX}
           scrollY={scrollY}
           onScrollChange={handlePressHoldScroll}
+          isMagnifyingGlassMode={isMagnifyingGlassMode}
+          onMagnifyingGlassTouch={onMagnifyingGlassTouch}
         >
           <View style={[
             styles.canvasContainer,

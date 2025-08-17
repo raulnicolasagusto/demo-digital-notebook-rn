@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import { Pencil, Type, Plus, Eraser, Save, StickyNote, Trash2, ZoomIn } from 'lucide-react-native';
+import { Pencil, Type, Plus, Eraser, Save, StickyNote, Trash2, Search } from 'lucide-react-native';
 
 interface FloatingToolButtonProps {
   isTextMode: boolean;
@@ -129,7 +129,7 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
               style={[styles.toolOptionButton, isMagnifyingGlassMode && styles.toolOptionActive]}
               onPress={() => handleToolSelect('magnifyingGlass')}
             >
-              <ZoomIn size={20} color={isMagnifyingGlassMode ? "#FFFFFF" : "#6D28D9"} />
+              <Search size={20} color={isMagnifyingGlassMode ? "#FFFFFF" : "#6D28D9"} />
             </TouchableOpacity>
           </Animated.View>
 
