@@ -80,35 +80,35 @@ export const PressHoldCanvas: React.FC<PressHoldCanvasProps> = ({
             y: (pan.y as any)._value,
           });
           pan.setValue({ x: 0, y: 0 });
-        }, 200); // Reducido a 200ms para respuesta más rápida
+        }, 50); // Reducido a 50ms para respuesta más rápida
       }
     },
 
     onPanResponderMove: (evt, gestureState) => {
       if (isHoldActive && isMoving.current) {
-        // Usar valores directos del gesto para movimiento más fluido
+        // Movimiento directo y fluido - sin cálculos complejos
         const translateX = gestureState.dx;
         const translateY = gestureState.dy;
         
-        // Calcular posición objetivo
-        const targetScrollX = scrollX - translateX;
-        const targetScrollY = scrollY - translateY;
+        // Aplicar límites directamente a la traducción
+        const maxTranslateX = Math.min(scrollX, maxScrollX - scrollX);
+        const minTranslateX = -scrollX;
+        const maxTranslateY = Math.min(scrollY, maxScrollY - scrollY);
+        const minTranslateY = -scrollY;
         
-        // Aplicar límites
-        const clampedScrollX = Math.max(0, Math.min(targetScrollX, maxScrollX));
-        const clampedScrollY = Math.max(0, Math.min(targetScrollY, maxScrollY));
+        const clampedTranslateX = Math.max(minTranslateX, Math.min(translateX, maxTranslateX));
+        const clampedTranslateY = Math.max(minTranslateY, Math.min(translateY, maxTranslateY));
         
-        // Actualizar animación inmediatamente (sin throttle)
-        const finalTranslateX = -(clampedScrollX - scrollX);
-        const finalTranslateY = -(clampedScrollY - scrollY);
-        
+        // Actualizar animación INMEDIATAMENTE para máxima fluidez
         pan.setValue({ 
-          x: finalTranslateX, 
-          y: finalTranslateY 
+          x: clampedTranslateX, 
+          y: clampedTranslateY 
         });
         
-        // Actualizar scroll del padre con throttle
-        throttledScrollUpdate(clampedScrollX, clampedScrollY);
+        // Calcular nuevo scroll para el padre (throttled)
+        const newScrollX = scrollX - clampedTranslateX;
+        const newScrollY = scrollY - clampedTranslateY;
+        throttledScrollUpdate(newScrollX, newScrollY);
       }
     },
 
@@ -170,9 +170,10 @@ export const PressHoldCanvas: React.FC<PressHoldCanvasProps> = ({
             ],
           },
         ]}
-        // Optimización: reduce re-renders
+        // Configuración para máximo rendimiento
         removeClippedSubviews={true}
         renderToHardwareTextureAndroid={true}
+        collapsable={false}
       >
         {children}
       </Animated.View>
