@@ -359,8 +359,8 @@ export default function NotebookScreen() {
         >
           <CanvasBackground
             backgroundId={selectedBackground}
-            width={1280}
-            height={900}
+            width={960}
+            height={1200}
           />
           <CanvasNoteImages 
             noteImages={noteImages}

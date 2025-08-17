@@ -15,10 +15,10 @@ export const ResponsiveCanvas: React.FC<ResponsiveCanvasProps> = ({
   textElementsLength = 0 
 }) => {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  
-  // Nuevo tamaño del canvas para tablets modernas 1280x800
-  const CANVAS_WIDTH = 1280;   // Tablets modernas
-  const CANVAS_HEIGHT = 900;   // Tablets modernas
+
+  // Nuevo tamaño del canvas para tablets modernas 1920x1200
+  const CANVAS_WIDTH = 960;   // Tablets modernas
+  const CANVAS_HEIGHT = 1200;   // Tablets modernas
   
   // Breakpoints actualizados
   const isModernTablet = screenWidth >= 1280; // Tablets modernas 1280x800 o más grandes
