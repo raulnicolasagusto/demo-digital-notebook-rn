@@ -92,9 +92,10 @@ export default function NotebookScreen() {
   const setupImmersiveMode = async () => {
     if (Platform.OS === 'android') {
       try {
-        // Configurar navegación inmersiva
+        // Solo ocultar la barra de navegación, sin cambiar el comportamiento
         await NavigationBar.setVisibilityAsync('hidden');
-        await NavigationBar.setBehaviorAsync('overlay-swipe');
+        // Comentamos setBehaviorAsync ya que causa warnings con edge-to-edge
+        // await NavigationBar.setBehaviorAsync('overlay-swipe');
         setIsNavigationBarVisible(false);
       } catch (error) {
         console.log('Error setting up immersive mode:', error);

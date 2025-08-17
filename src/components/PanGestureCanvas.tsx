@@ -1,5 +1,11 @@
-import React, { useRef, useState } from 'react';
-import { View, PanResponder, Animated } from 'react-native';
+import React, { useEffect } from 'react';
+import { View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  runOnJS,
+} from 'react-native-reanimated';
 
 interface PanGestureCanvasProps {
   children: React.ReactNode;
@@ -22,101 +28,82 @@ export const PanGestureCanvas: React.FC<PanGestureCanvasProps> = ({
   scrollY,
   onScrollChange,
 }) => {
-  const pan = useRef(new Animated.ValueXY({ x: -scrollX, y: -scrollY })).current;
-  const [activeFingers, setActiveFingers] = useState(0);
-  const [currentPanX, setCurrentPanX] = useState(-scrollX);
-  const [currentPanY, setCurrentPanY] = useState(-scrollY);
-
-  // Calcular límites del scroll
+  const translateX = useSharedValue(-scrollX);
+  const translateY = useSharedValue(-scrollY);
+  const startX = useSharedValue(0);
+  const startY = useSharedValue(0);
+  
+  // Calcular los límites del scroll
   const maxScrollX = Math.max(0, canvasWidth - viewportWidth);
   const maxScrollY = Math.max(0, canvasHeight - viewportHeight);
 
-  const panResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Solo activar si hay exactamente 2 dedos
-      return evt.nativeEvent.touches.length === 2;
-    },
-    onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
-      return evt.nativeEvent.touches.length === 2;
-    },
-    onPanResponderGrant: (evt, gestureState) => {
-      if (evt.nativeEvent.touches.length === 2) {
-        setActiveFingers(2);
-        pan.setOffset({
-          x: currentPanX,
-          y: currentPanY,
-        });
-      }
-    },
-    onPanResponderMove: (evt, gestureState) => {
-      if (evt.nativeEvent.touches.length === 2) {
-        // Calcular nueva posición con límites
-        let newX = gestureState.dx;
-        let newY = gestureState.dy;
-        
-        const targetScrollX = -(currentPanX + newX);
-        const targetScrollY = -(currentPanY + newY);
-        
-        // Aplicar límites
-        if (targetScrollX < 0) newX = -currentPanX;
-        if (targetScrollX > maxScrollX) newX = -maxScrollX - currentPanX;
-        if (targetScrollY < 0) newY = -currentPanY;
-        if (targetScrollY > maxScrollY) newY = -maxScrollY - currentPanY;
-        
-        pan.setValue({ x: newX, y: newY });
-        
-        // Actualizar el scroll en el componente padre
-        const newScrollX = Math.max(0, Math.min(-(currentPanX + newX), maxScrollX));
-        const newScrollY = Math.max(0, Math.min(-(currentPanY + newY), maxScrollY));
-        onScrollChange(newScrollX, newScrollY);
-      }
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      setActiveFingers(0);
-      const newPanX = currentPanX + gestureState.dx;
-      const newPanY = currentPanY + gestureState.dy;
-      setCurrentPanX(newPanX);
-      setCurrentPanY(newPanY);
-      pan.flattenOffset();
-    },
-    onPanResponderTerminate: (evt, gestureState) => {
-      setActiveFingers(0);
-      pan.flattenOffset();
-    },
-  });
-
-  // Sincronizar con cambios externos del scroll
-  React.useEffect(() => {
-    const newPanX = -scrollX;
-    const newPanY = -scrollY;
-    setCurrentPanX(newPanX);
-    setCurrentPanY(newPanY);
-    pan.setValue({ x: newPanX, y: newPanY });
+  // Sincronizar con cambios externos del scroll (barras de scroll)
+  useEffect(() => {
+    translateX.value = -scrollX;
+    translateY.value = -scrollY;
   }, [scrollX, scrollY]);
 
+  // Función para actualizar el scroll en el componente padre
+  const updateParentScroll = (newScrollX: number, newScrollY: number) => {
+    onScrollChange(newScrollX, newScrollY);
+  };
+
+  // Gesto de pan que solo funciona con 2 dedos
+  const panGesture = Gesture.Pan()
+    .minPointers(2) // Requiere exactamente 2 dedos
+    .maxPointers(2) // Máximo 2 dedos
+    .onBegin(() => {
+      // Guardar la posición inicial
+      startX.value = scrollX;
+      startY.value = scrollY;
+    })
+    .onUpdate((event) => {
+      // Calcular nueva posición basada en la posición inicial + el movimiento
+      const newScrollX = startX.value - event.translationX;
+      const newScrollY = startY.value - event.translationY;
+      
+      // Aplicar límites
+      const clampedScrollX = Math.max(0, Math.min(newScrollX, maxScrollX));
+      const clampedScrollY = Math.max(0, Math.min(newScrollY, maxScrollY));
+      
+      // Actualizar valores animados
+      translateX.value = -clampedScrollX;
+      translateY.value = -clampedScrollY;
+      
+      // Actualizar el scroll en el componente padre
+      runOnJS(updateParentScroll)(clampedScrollX, clampedScrollY);
+    });
+
+  // Estilo animado para el contenedor del canvas
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+      ],
+    };
+  });
+
   return (
-    <View
-      style={{
-        width: viewportWidth,
-        height: viewportHeight,
+    <GestureDetector gesture={panGesture}>
+      <View style={{ 
+        width: viewportWidth, 
+        height: viewportHeight, 
         overflow: 'hidden',
         backgroundColor: '#E5E7EB',
-      }}
-      {...panResponder.panHandlers}
-    >
-      <Animated.View
-        style={[
-          {
-            width: canvasWidth,
-            height: canvasHeight,
-          },
-          {
-            transform: [{ translateX: pan.x }, { translateY: pan.y }],
-          },
-        ]}
-      >
-        {children}
-      </Animated.View>
-    </View>
+      }}>
+        <Animated.View
+          style={[
+            {
+              width: canvasWidth,
+              height: canvasHeight,
+            },
+            animatedStyle,
+          ]}
+        >
+          {children}
+        </Animated.View>
+      </View>
+    </GestureDetector>
   );
 };
