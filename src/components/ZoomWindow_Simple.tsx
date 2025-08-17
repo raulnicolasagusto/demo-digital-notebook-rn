@@ -30,7 +30,8 @@ interface ZoomWindowSimpleProps {
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const ZOOM_AREA_HEIGHT = 280;
-const AREA_SIZE = 120;
+const AREA_SIZE = 120; // Tamaño del área capturada en el canvas
+const ZOOM_SCALE = 3; // Factor de amplificación 3x como GoodNotes
 
 export const ZoomWindowSimple: React.FC<ZoomWindowSimpleProps> = ({
   isActive,
@@ -86,10 +87,130 @@ export const ZoomWindowSimple: React.FC<ZoomWindowSimpleProps> = ({
     }
   }, [isActive, selectedArea]);
 
+  // SINCRONIZACIÓN BIDIRECCIONAL: Canvas → Zoom Window
+  useEffect(() => {
+    if (selectedArea && canvasPaths && canvasPaths.length > 0) {
+      const areaLeftX = selectedArea.x - AREA_SIZE / 2;
+      const areaTopY = selectedArea.y - AREA_SIZE / 2;
+      const areaRightX = selectedArea.x + AREA_SIZE / 2;
+      const areaBottomY = selectedArea.y + AREA_SIZE / 2;
+
+      // Filtrar y convertir paths que están dentro del área seleccionada
+      const pathsInArea = canvasPaths
+        .map(pathData => {
+          if (!pathData || !pathData.path) return null;
+          const newPath = convertCanvasPathToZoomPath(pathData.path, areaLeftX, areaTopY);
+          return newPath ? { ...pathData, path: newPath } : null;
+        })
+        .filter((path): path is DrawPath => path !== null);
+
+      setZoomPaths(pathsInArea);
+    } else if (selectedArea) {
+      // Si no hay paths o el área cambió, limpiar
+      setZoomPaths([]);
+    }
+  }, [selectedArea, canvasPaths]);
+
   const handleCanvasTouch = (x: number, y: number) => {
     if (!selectedArea) {
       setSelectedArea({ x, y });
       setShowInstructions(false);
+    }
+  };
+
+  // CONVERSIÓN Canvas → Zoom Window (para mostrar trazos existentes)
+  const convertCanvasPathToZoomPath = (canvasPath: string, areaX: number, areaY: number): string | null => {
+    if (!canvasPath || typeof canvasPath !== 'string') return null;
+    
+    let hasValidPoints = false;
+    const zoomAreaWidth = screenWidth - 40; // Área de dibujo del zoom
+    const zoomAreaHeight = ZOOM_AREA_HEIGHT - 120;
+
+    try {
+      const convertedPath = canvasPath
+        .replace(/M(\d+\.?\d*),(\d+\.?\d*)/g, (match, x, y) => {
+          const canvasX = parseFloat(x);
+          const canvasY = parseFloat(y);
+          
+          if (isNaN(canvasX) || isNaN(canvasY)) return match;
+          
+          // Verificar si el punto está dentro del área seleccionada
+          if (canvasX >= areaX && canvasX <= areaX + AREA_SIZE && 
+              canvasY >= areaY && canvasY <= areaY + AREA_SIZE) {
+            hasValidPoints = true;
+            // Convertir coordenadas del canvas al zoom window (amplificar 3x)
+            const zoomX = (canvasX - areaX) * ZOOM_SCALE;
+            const zoomY = (canvasY - areaY) * ZOOM_SCALE;
+            return `M${zoomX},${zoomY}`;
+          }
+          return match;
+        })
+        .replace(/L(\d+\.?\d*),(\d+\.?\d*)/g, (match, x, y) => {
+          const canvasX = parseFloat(x);
+          const canvasY = parseFloat(y);
+          
+          if (isNaN(canvasX) || isNaN(canvasY)) return match;
+          
+          // Verificar si el punto está dentro del área seleccionada
+          if (canvasX >= areaX && canvasX <= areaX + AREA_SIZE && 
+              canvasY >= areaY && canvasY <= areaY + AREA_SIZE) {
+            hasValidPoints = true;
+            // Convertir coordenadas del canvas al zoom window (amplificar 3x)
+            const zoomX = (canvasX - areaX) * ZOOM_SCALE;
+            const zoomY = (canvasY - areaY) * ZOOM_SCALE;
+            return `L${zoomX},${zoomY}`;
+          }
+          return match;
+        });
+
+      return hasValidPoints ? convertedPath : null;
+    } catch (error) {
+      console.error('Error converting canvas path to zoom path:', error);
+      return null;
+    }
+  };
+
+  // CONVERSIÓN Zoom Window → Canvas (para dibujar en el canvas original)
+  const convertZoomPathToCanvasPath = (zoomPath: DrawPath, area: { x: number; y: number }): DrawPath | null => {
+    if (!zoomPath || !zoomPath.path || !area) return null;
+    
+    try {
+      const areaLeftX = area.x - AREA_SIZE / 2;
+      const areaTopY = area.y - AREA_SIZE / 2;
+
+      const canvasPath = zoomPath.path
+        .replace(/M(\d+\.?\d*),(\d+\.?\d*)/g, (match, x, y) => {
+          const zoomX = parseFloat(x);
+          const zoomY = parseFloat(y);
+          
+          if (isNaN(zoomX) || isNaN(zoomY)) return match;
+          
+          // Convertir de coordenadas del zoom al canvas (reducir de 3x a 1x)
+          const canvasX = areaLeftX + (zoomX / ZOOM_SCALE);
+          const canvasY = areaTopY + (zoomY / ZOOM_SCALE);
+          
+          return `M${canvasX},${canvasY}`;
+        })
+        .replace(/L(\d+\.?\d*),(\d+\.?\d*)/g, (match, x, y) => {
+          const zoomX = parseFloat(x);
+          const zoomY = parseFloat(y);
+          
+          if (isNaN(zoomX) || isNaN(zoomY)) return match;
+          
+          // Convertir de coordenadas del zoom al canvas (reducir de 3x a 1x)
+          const canvasX = areaLeftX + (zoomX / ZOOM_SCALE);
+          const canvasY = areaTopY + (zoomY / ZOOM_SCALE);
+          
+          return `L${canvasX},${canvasY}`;
+        });
+
+      return {
+        ...zoomPath,
+        path: canvasPath
+      };
+    } catch (error) {
+      console.error('Error converting zoom path to canvas path:', error);
+      return null;
     }
   };
 
@@ -130,52 +251,6 @@ export const ZoomWindowSimple: React.FC<ZoomWindowSimpleProps> = ({
       setIsDrawing(false);
     },
   });
-
-  // Convierte un path del zoom window a coordenadas del canvas
-  const convertZoomPathToCanvasPath = (zoomPath: DrawPath, area: { x: number; y: number }): DrawPath | null => {
-    if (!zoomPath || !zoomPath.path || !area) return null;
-    
-    try {
-      const areaLeftX = area.x - AREA_SIZE / 2;
-      const areaTopY = area.y - AREA_SIZE / 2;
-      const zoomAreaWidth = screenWidth - 40; // Menos márgenes
-      const zoomAreaHeight = ZOOM_AREA_HEIGHT - 120; // Menos header y padding
-
-      const canvasPath = zoomPath.path
-        .replace(/M(\d+\.?\d*),(\d+\.?\d*)/g, (match, x, y) => {
-          const zoomX = parseFloat(x);
-          const zoomY = parseFloat(y);
-          
-          if (isNaN(zoomX) || isNaN(zoomY)) return match;
-          
-          // Convertir de coordenadas del zoom a coordenadas del canvas
-          const canvasX = areaLeftX + (zoomX * AREA_SIZE / zoomAreaWidth);
-          const canvasY = areaTopY + (zoomY * AREA_SIZE / zoomAreaHeight);
-          
-          return `M${canvasX},${canvasY}`;
-        })
-        .replace(/L(\d+\.?\d*),(\d+\.?\d*)/g, (match, x, y) => {
-          const zoomX = parseFloat(x);
-          const zoomY = parseFloat(y);
-          
-          if (isNaN(zoomX) || isNaN(zoomY)) return match;
-          
-          // Convertir de coordenadas del zoom a coordenadas del canvas
-          const canvasX = areaLeftX + (zoomX * AREA_SIZE / zoomAreaWidth);
-          const canvasY = areaTopY + (zoomY * AREA_SIZE / zoomAreaHeight);
-          
-          return `L${canvasX},${canvasY}`;
-        });
-
-      return {
-        ...zoomPath,
-        path: canvasPath
-      };
-    } catch (error) {
-      console.error('Error converting zoom path to canvas path:', error);
-      return null;
-    }
-  };
 
   const clearDrawing = () => {
     setZoomPaths([]);
@@ -288,13 +363,13 @@ export const ZoomWindowSimple: React.FC<ZoomWindowSimpleProps> = ({
               width={screenWidth - 40}
               style={styles.zoomSvg}
             >
-              {/* Paths del zoom */}
+              {/* Paths sincronizados del canvas (amplificados 3x) */}
               {zoomPaths.map((pathData, index) => (
                 <Path
                   key={`zoom-${index}`}
                   d={pathData.path}
                   stroke={pathData.color}
-                  strokeWidth="3"
+                  strokeWidth="2" // Más fino en el zoom
                   fill="none"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -306,7 +381,7 @@ export const ZoomWindowSimple: React.FC<ZoomWindowSimpleProps> = ({
                 <Path
                   d={currentPath}
                   stroke="#000000"
-                  strokeWidth="3"
+                  strokeWidth="2"
                   fill="none"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -314,12 +389,24 @@ export const ZoomWindowSimple: React.FC<ZoomWindowSimpleProps> = ({
               )}
             </Svg>
             
+            {/* Grid visual para referencia */}
+            <View style={styles.gridOverlay}>
+              {/* Líneas verticales cada 30px (10px en canvas real) */}
+              {Array.from({ length: Math.floor((screenWidth - 40) / 30) }).map((_, i) => (
+                <View key={`v-${i}`} style={[styles.gridLine, styles.verticalLine, { left: i * 30 }]} />
+              ))}
+              {/* Líneas horizontales cada 30px (10px en canvas real) */}
+              {Array.from({ length: Math.floor((ZOOM_AREA_HEIGHT - 120) / 30) }).map((_, i) => (
+                <View key={`h-${i}`} style={[styles.gridLine, styles.horizontalLine, { top: i * 30 }]} />
+              ))}
+            </View>
+            
             <View style={styles.statusOverlay}>
               <Text style={styles.statusText}>
-                📍 Posición: ({Math.round(selectedArea.x)}, {Math.round(selectedArea.y)})
+                📍 Canvas: ({Math.round(selectedArea.x)}, {Math.round(selectedArea.y)})
               </Text>
               <Text style={styles.statusText}>
-                🔍 Área: {AREA_SIZE}x{AREA_SIZE}px • Dibuja aquí
+                🔍 Zoom: {ZOOM_SCALE}x • Área: {AREA_SIZE}x{AREA_SIZE}px • Dibuja aquí
               </Text>
             </View>
           </View>
@@ -457,6 +544,27 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
+  },
+  gridOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none', // No interfiere con el dibujo
+  },
+  gridLine: {
+    position: 'absolute',
+    backgroundColor: '#E5E7EB',
+    opacity: 0.3,
+  },
+  verticalLine: {
+    width: 1,
+    height: '100%',
+  },
+  horizontalLine: {
+    height: 1,
+    width: '100%',
   },
   statusOverlay: {
     position: 'absolute',
