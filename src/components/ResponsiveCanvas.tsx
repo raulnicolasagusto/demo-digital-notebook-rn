@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, useWindowDimensions, ScrollView } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { CanvasPerformanceOptimizer } from './CanvasPerformanceOptimizer';
 import { CustomScrollBar } from './CustomScrollBar';
+import { PanGestureCanvas } from './PanGestureCanvas';
 
 interface ResponsiveCanvasProps {
   children: React.ReactNode;
@@ -36,8 +37,12 @@ export const ResponsiveCanvas: React.FC<ResponsiveCanvasProps> = ({
   const handleVerticalScroll = useCallback((offset: number) => {
     setScrollY(offset);
   }, []);
-  
-  // Para tablets modernas (≥1280px): Canvas directo sin barras
+
+  // Handler para cambios de scroll desde gestos
+  const handleGestureScroll = useCallback((newScrollX: number, newScrollY: number) => {
+    setScrollX(newScrollX);
+    setScrollY(newScrollY);
+  }, []);  // Para tablets modernas (≥1280px): Canvas directo sin barras
   if (isModernTablet) {
     const availableWidth = screenWidth - 40;
     const availableHeight = screenHeight - 140;
@@ -80,9 +85,9 @@ export const ResponsiveCanvas: React.FC<ResponsiveCanvasProps> = ({
     );
   }
   
-  // Para dispositivos más pequeños: Sistema con barras de scroll
-  const viewportWidth = screenWidth - 20;  // 20px para barra vertical (actualizado)
-  const viewportHeight = screenHeight - 120; // 20px para barra horizontal + header (actualizado)
+  // Para dispositivos más pequeños: Sistema con barras de scroll y ScrollView nativo
+  const viewportWidth = screenWidth - 20;  // 20px para barra vertical
+  const viewportHeight = screenHeight - 120; // 20px para barra horizontal + header
   
   return (
     <View style={styles.smallDeviceContainer}>
@@ -104,35 +109,41 @@ export const ResponsiveCanvas: React.FC<ResponsiveCanvasProps> = ({
         onScroll={handleVerticalScroll}
       />
       
-      {/* Área del canvas con scroll - SIN MÁRGENES */}
+      {/* Área del canvas con gestos de pan */}
       <View style={[
         styles.canvasViewport,
         {
           width: viewportWidth,
           height: viewportHeight,
-          marginLeft: 20, // Reducido de 40 a 20px (ancho real de barra vertical)
-          marginTop: 20,  // Reducido de 40 a 20px (altura real de barra horizontal)
+          marginLeft: 20,
+          marginTop: 20,
         }
       ]}>
-        <View style={[
-          styles.canvasContainer,
-          {
-            width: CANVAS_WIDTH,
-            height: CANVAS_HEIGHT,
-            transform: [
-              { translateX: -scrollX },
-              { translateY: -scrollY },
-            ],
-          }
-        ]}>
-          <CanvasPerformanceOptimizer
-            pathsLength={pathsLength}
-            textElementsLength={textElementsLength}
-            zoomLevel={1}
-          >
-            {children}
-          </CanvasPerformanceOptimizer>
-        </View>
+        <PanGestureCanvas
+          canvasWidth={CANVAS_WIDTH}
+          canvasHeight={CANVAS_HEIGHT}
+          viewportWidth={viewportWidth}
+          viewportHeight={viewportHeight}
+          scrollX={scrollX}
+          scrollY={scrollY}
+          onScrollChange={handleGestureScroll}
+        >
+          <View style={[
+            styles.canvasContainer,
+            {
+              width: CANVAS_WIDTH,
+              height: CANVAS_HEIGHT,
+            }
+          ]}>
+            <CanvasPerformanceOptimizer
+              pathsLength={pathsLength}
+              textElementsLength={textElementsLength}
+              zoomLevel={1}
+            >
+              {children}
+            </CanvasPerformanceOptimizer>
+          </View>
+        </PanGestureCanvas>
       </View>
     </View>
   );
