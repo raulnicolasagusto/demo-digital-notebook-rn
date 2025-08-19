@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useUser, useAuth } from '@clerk/clerk-expo';
@@ -14,7 +14,8 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { StatusBar } from 'expo-status-bar';
 import { BackgroundPicker } from '@/components/BackgroundPicker';
 import { CanvasBackground } from '@/components/CanvasBackground';
-import { ZoomWindowSimple as ZoomWindow } from '@/components/ZoomWindow_Simple';
+import { CanvasWithZoomWindow } from '@/components/CanvasWithZoomWindow';
+import { Stroke, Rect } from '@/utils/geometry';
 
 interface DrawPath {
   path: string;
@@ -76,8 +77,66 @@ export default function NotebookScreen() {
     scale: 1.0
   });
 
+  // Estados para el nuevo sistema de Zoom Window
+  const [zoomTargetRect, setZoomTargetRect] = useState<Rect>({
+    x: 480 - 60, // Centrado en X
+    y: 600 - 60, // Centrado en Y  
+    width: 120,
+    height: 120
+  });
+
   // Referencia para el handler de la lupa
   const magnifyingGlassHandler = useRef<((x: number, y: number) => void) | null>(null);
+
+  // Función para registrar el handler de toque del canvas desde CanvasWithZoomWindow
+  const registerCanvasTouchHandler = useCallback((handler: (x: number, y: number) => void) => {
+    magnifyingGlassHandler.current = handler;
+  }, []);
+
+  // Función para convertir DrawPath a Stroke
+  const convertDrawPathToStroke = (drawPath: DrawPath): Stroke => {
+    // Parsear el path SVG para extraer puntos
+    const points: { x: number; y: number }[] = [];
+    const pathRegex = /([ML])(\d+\.?\d*),(\d+\.?\d*)/g;
+    let match;
+    
+    while ((match = pathRegex.exec(drawPath.path)) !== null) {
+      const x = parseFloat(match[2]);
+      const y = parseFloat(match[3]);
+      if (!isNaN(x) && !isNaN(y)) {
+        points.push({ x, y });
+      }
+    }
+
+    return {
+      id: `stroke-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      points,
+      width: 2, // Grosor predeterminado
+      color: drawPath.color,
+      opacity: 1,
+      tool: 'pen'
+    };
+  };
+
+  // Función para convertir Stroke a DrawPath
+  const convertStrokeToDrawPath = (stroke: Stroke): DrawPath => {
+    if (stroke.points.length === 0) {
+      return { path: '', color: stroke.color };
+    }
+
+    let path = `M${stroke.points[0].x},${stroke.points[0].y}`;
+    for (let i = 1; i < stroke.points.length; i++) {
+      path += ` L${stroke.points[i].x},${stroke.points[i].y}`;
+    }
+
+    return {
+      path,
+      color: stroke.color
+    };
+  };
+
+  // Convertir paths existentes a strokes
+  const canvasStrokes: Stroke[] = paths.map(convertDrawPathToStroke);
 
   // Create canvas text handler
   const handleCanvasPress = createCanvasTextHandler(
@@ -357,53 +416,145 @@ export default function NotebookScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Responsive Canvas Container */}
-      <ResponsiveCanvas
-        pathsLength={paths.length}
-        textElementsLength={textElements.length}
-        isMagnifyingGlassMode={isMagnifyingGlassMode}
-        onCanvasViewInfoChange={setCanvasViewInfo}
-        onMagnifyingGlassTouch={(x, y) => {
-          // Llamar al handler registrado por MagnifyingGlassTool
-          if (magnifyingGlassHandler.current) {
-            magnifyingGlassHandler.current(x, y);
-          }
-        }}
-      >
-        <CanvasDrawing
-          isTextMode={isTextMode}
-          isEraserMode={isEraserMode}
-          isNoteMode={isNoteMode}
-          isDrawing={isDrawing}
-          setIsDrawing={setIsDrawing}
-          currentPath={currentPath}
-          setCurrentPath={setCurrentPath}
-          paths={paths}
-          setPaths={setPaths}
-          onCanvasPress={handleCanvasPress}
-          onNotePress={handleAddNoteImage}
+      {/* Canvas Principal */}
+      {!isMagnifyingGlassMode ? (
+        /* Modo normal - Canvas tradicional */
+        <ResponsiveCanvas
+          pathsLength={paths.length}
+          textElementsLength={textElements.length}
+          isMagnifyingGlassMode={isMagnifyingGlassMode}
+          onCanvasViewInfoChange={setCanvasViewInfo}
+          onMagnifyingGlassTouch={(x, y) => {
+            // Llamar al handler registrado por MagnifyingGlassTool
+            if (magnifyingGlassHandler.current) {
+              magnifyingGlassHandler.current(x, y);
+            }
+          }}
         >
-          <CanvasBackground
-            backgroundId={selectedBackground}
-            width={960}
-            height={1200}
-          />
-          <CanvasNoteImages 
-            noteImages={noteImages}
-            onDeleteNote={(noteId) => {
-              setNoteImages(prev => prev.filter(note => note.id !== noteId));
-            }}
-          />
-          <CanvasText
+          <CanvasDrawing
             isTextMode={isTextMode}
-            textElements={textElements}
-            setTextElements={setTextElements}
-            editingText={editingText}
-            setEditingText={setEditingText}
+            isEraserMode={isEraserMode}
+            isNoteMode={isNoteMode}
+            isDrawing={isDrawing}
+            setIsDrawing={setIsDrawing}
+            currentPath={currentPath}
+            setCurrentPath={setCurrentPath}
+            paths={paths}
+            setPaths={setPaths}
             onCanvasPress={handleCanvasPress}
-          />
-        </CanvasDrawing>
-      </ResponsiveCanvas>
+            onNotePress={handleAddNoteImage}
+          >
+            <CanvasBackground
+              backgroundId={selectedBackground}
+              width={960}
+              height={1200}
+            />
+            <CanvasNoteImages 
+              noteImages={noteImages}
+              onDeleteNote={(noteId) => {
+                setNoteImages(prev => prev.filter(note => note.id !== noteId));
+              }}
+            />
+            <CanvasText
+              isTextMode={isTextMode}
+              textElements={textElements}
+              setTextElements={setTextElements}
+              editingText={editingText}
+              setEditingText={setEditingText}
+              onCanvasPress={handleCanvasPress}
+            />
+          </CanvasDrawing>
+        </ResponsiveCanvas>
+      ) : (
+        /* Modo Zoom Window - Nuevo sistema estilo GoodNotes */
+        <CanvasWithZoomWindow
+          canvasWidth={960}
+          canvasHeight={1200}
+          targetRect={zoomTargetRect}
+          onChangeTargetRect={setZoomTargetRect}
+          zoomWindowWidth={canvasViewInfo.containerWidth}
+          zoomWindowHeight={300}
+          zoomFactor={3.0}
+          strokes={canvasStrokes}
+          onAddStroke={(stroke: Stroke) => {
+            const drawPath = convertStrokeToDrawPath(stroke);
+            setPaths(prev => [...prev, drawPath]);
+          }}
+          onUpdateStrokePartial={(id: string, partial: Partial<Stroke>) => {
+            // Manejar actualizaciones parciales en tiempo real si es necesario
+            console.log('Stroke update:', id, partial);
+          }}
+          onCommitStroke={(id: string) => {
+            // Manejar finalización de stroke si es necesario
+            console.log('Stroke committed:', id);
+          }}
+          onClearArea={() => {
+            // Limpiar solo los strokes dentro del área objetivo
+            const filteredPaths = paths.filter(path => {
+              const stroke = convertDrawPathToStroke(path);
+              return !stroke.points.some(point => 
+                point.x >= zoomTargetRect.x && point.x <= zoomTargetRect.x + zoomTargetRect.width &&
+                point.y >= zoomTargetRect.y && point.y <= zoomTargetRect.y + zoomTargetRect.height
+              );
+            });
+            setPaths(filteredPaths);
+          }}
+          strokeStyle={{
+            width: 2,
+            color: '#000000',
+            opacity: 1,
+            scaleStrokeToTarget: true
+          }}
+          isActive={isMagnifyingGlassMode}
+          onClose={() => setIsMagnifyingGlassMode(false)}
+          onCanvasTouchHandler={registerCanvasTouchHandler}
+        >
+          <ResponsiveCanvas
+            pathsLength={paths.length}
+            textElementsLength={textElements.length}
+            isMagnifyingGlassMode={true}
+            onCanvasViewInfoChange={setCanvasViewInfo}
+            onMagnifyingGlassTouch={(x, y) => {
+              // Llamar al handler registrado por CanvasWithZoomWindow
+              if (magnifyingGlassHandler.current) {
+                magnifyingGlassHandler.current(x, y);
+              }
+            }}
+          >
+            <CanvasDrawing
+              isTextMode={false} // En modo zoom, solo mostrar contenido, no interactuar
+              isEraserMode={false}
+              isNoteMode={false}
+              isDrawing={false}
+              setIsDrawing={() => {}} // No-op
+              currentPath=""
+              setCurrentPath={() => {}} // No-op
+              paths={paths}
+              setPaths={() => {}} // No-op, las modificaciones vienen del zoom window
+              onCanvasPress={() => {}} // No-op
+              onNotePress={() => {}} // No-op
+            >
+              <CanvasBackground
+                backgroundId={selectedBackground}
+                width={960}
+                height={1200}
+              />
+              <CanvasNoteImages 
+                noteImages={noteImages}
+                onDeleteNote={() => {}} // No-op en modo zoom
+              />
+              <CanvasText
+                isTextMode={false}
+                textElements={textElements}
+                setTextElements={() => {}} // No-op
+                editingText={null}
+                setEditingText={() => {}} // No-op
+                onCanvasPress={() => {}} // No-op
+              />
+            </CanvasDrawing>
+          </ResponsiveCanvas>
+        </CanvasWithZoomWindow>
+      )}
 
       {/* Page Navigation */}
       <PageNavigation
@@ -448,24 +599,6 @@ export default function NotebookScreen() {
         onClose={() => setShowBackgroundPicker(false)}
         onSelectBackground={setSelectedBackground}
         selectedBackground={selectedBackground}
-      />
-
-      {/* Zoom Window Tool */}
-      <ZoomWindow
-        isActive={isMagnifyingGlassMode}
-        onClose={() => setIsMagnifyingGlassMode(false)}
-        onDrawingUpdate={(newPaths: DrawPath[]) => setPaths(newPaths)}
-        canvasWidth={960}
-        canvasHeight={1200}
-        canvasPaths={paths}
-        canvasScale={1.0}
-        canvasOffset={{ x: 0, y: 0 }}
-        isTablet={true} // Temporal - debería detectarse automáticamente
-        scrollPosition={{ x: 0, y: 0 }} // Para dispositivos con scroll
-        canvasViewInfo={canvasViewInfo}
-        onCanvasTouchHandler={(handler: (x: number, y: number) => void) => {
-          magnifyingGlassHandler.current = handler;
-        }}
       />
     </View>
   );
