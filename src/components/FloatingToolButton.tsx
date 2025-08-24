@@ -6,8 +6,8 @@ interface FloatingToolButtonProps {
   isTextMode: boolean;
   isEraserMode: boolean;
   isNoteMode?: boolean;
-  isMagnifyingGlassMode?: boolean;
-  onModeChange: (mode: 'draw' | 'text' | 'eraser' | 'note' | 'magnifyingGlass') => void;
+  isZoomMode?: boolean;
+  onModeChange: (mode: 'draw' | 'text' | 'eraser' | 'note' | 'zoom') => void;
   onSave?: () => void;
   onClearNotes?: () => void;
 }
@@ -16,7 +16,7 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
   isTextMode,
   isEraserMode,
   isNoteMode = false,
-  isMagnifyingGlassMode = false,
+  isZoomMode = false,
   onModeChange,
   onSave,
   onClearNotes,
@@ -55,7 +55,7 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
     setIsExpanded(!isExpanded);
   };
 
-  const handleToolSelect = (tool: 'draw' | 'text' | 'eraser' | 'note' | 'magnifyingGlass') => {
+  const handleToolSelect = (tool: 'draw' | 'text' | 'eraser' | 'note' | 'zoom') => {
     onModeChange(tool);
     toggleTools(); // Close the menu after selection
   };
@@ -118,7 +118,7 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
           <Animated.View 
             style={[
               styles.toolOption,
-              styles.toolOptionMagnifyingGlass,
+              styles.toolOptionZoom,
               {
                 opacity: toolsOpacity,
                 transform: [{ scale: toolsScale }]
@@ -126,10 +126,10 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
             ]}
           >
             <TouchableOpacity 
-              style={[styles.toolOptionButton, isMagnifyingGlassMode && styles.toolOptionActive]}
-              onPress={() => handleToolSelect('magnifyingGlass')}
+              style={[styles.toolOptionButton, isZoomMode && styles.toolOptionActive]}
+              onPress={() => handleToolSelect('zoom')}
             >
-              <ZoomIn size={20} color={isMagnifyingGlassMode ? "#FFFFFF" : "#6D28D9"} />
+              <ZoomIn size={20} color={isZoomMode ? "#FFFFFF" : "#6D28D9"} />
             </TouchableOpacity>
           </Animated.View>
 
@@ -144,10 +144,10 @@ export const FloatingToolButton: React.FC<FloatingToolButtonProps> = ({
             ]}
           >
             <TouchableOpacity 
-              style={[styles.toolOptionButton, !isTextMode && !isEraserMode && !isNoteMode && !isMagnifyingGlassMode && styles.toolOptionActive]}
+              style={[styles.toolOptionButton, !isTextMode && !isEraserMode && !isNoteMode && !isZoomMode && styles.toolOptionActive]}
               onPress={() => handleToolSelect('draw')}
             >
-              <Pencil size={20} color={!isTextMode && !isEraserMode && !isNoteMode && !isMagnifyingGlassMode ? "#FFFFFF" : "#6D28D9"} />
+              <Pencil size={20} color={!isTextMode && !isEraserMode && !isNoteMode && !isZoomMode ? "#FFFFFF" : "#6D28D9"} />
             </TouchableOpacity>
           </Animated.View>
 
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   toolOptionNote: {
     bottom: 260,
   },
-  toolOptionMagnifyingGlass: {
+  toolOptionZoom: {
     bottom: 320,
   },
   toolOptionSave: {
