@@ -13,10 +13,13 @@ interface ZoomWindowProps {
   onPathAdd: (path: DrawPath) => void;
   strokeColor?: string;
   strokeWidth?: number;
+  canvasScale?: number;
+  canvasOffsetX?: number;
+  canvasOffsetY?: number;
 }
 
 const ZOOM_SCALE = 3;
-const ZOOM_WINDOW_HEIGHT = 300;
+const ZOOM_WINDOW_HEIGHT = 250;
 
 export const ZoomWindow: React.FC<ZoomWindowProps> = ({
   isActive,
@@ -26,16 +29,19 @@ export const ZoomWindow: React.FC<ZoomWindowProps> = ({
   paths,
   onPathAdd,
   strokeColor = '#000000',
-  strokeWidth = 3
+  strokeWidth = 3,
+  canvasScale = 1,
+  canvasOffsetX = 0,
+  canvasOffsetY = 0
 }) => {
   const { width: screenWidth } = useWindowDimensions();
   
   // Movable zoom area - adjusted for larger canvas
   const [zoomArea, setZoomArea] = useState({
     x: 80, // Initial position on screen
-    y: 200,
-    width: 150, // Smaller zoom area for better precision
-    height: 80
+    y: 200, // Moved down significantly to match where drawing appears
+    width: 175, // Smaller zoom area for better precision
+    height: 160 // Double height to look like two stacked rectangles
   });
 
   // Current drawing state
@@ -92,7 +98,7 @@ export const ZoomWindow: React.FC<ZoomWindowProps> = ({
       const { locationX, locationY } = event.nativeEvent;
       console.log('Zoom drawing start:', locationX, locationY);
       
-      // Convert zoom coordinates to screen coordinates
+      // Direct mapping from zoom window to zoom area on screen
       const screenX = zoomArea.x + (locationX / zoomWindowWidth) * zoomArea.width;
       const screenY = zoomArea.y + (locationY / zoomWindowDrawHeight) * zoomArea.height;
       
@@ -113,7 +119,7 @@ export const ZoomWindow: React.FC<ZoomWindowProps> = ({
       
       const { locationX, locationY } = event.nativeEvent;
       
-      // Convert zoom coordinates to screen coordinates
+      // Direct mapping from zoom window to zoom area on screen
       const screenX = zoomArea.x + (locationX / zoomWindowWidth) * zoomArea.width;
       const screenY = zoomArea.y + (locationY / zoomWindowDrawHeight) * zoomArea.height;
       
@@ -174,8 +180,14 @@ export const ZoomWindow: React.FC<ZoomWindowProps> = ({
         {...zoomAreaPanResponder.panHandlers}
       >
         <View style={styles.indicatorBorder}>
+          {/* Horizontal divider line in the middle */}
+          <View style={[styles.dividerLine, { 
+            top: zoomArea.height / 2 - 1, 
+            width: zoomArea.width 
+          }]} />
+          
           <View style={styles.dragHandle}>
-            <Move size={20} color="#6D28D9" />
+            <Move size={20} color="#ffff" />
             <Text style={styles.moveText}>MOVER</Text>
           </View>
         </View>
@@ -280,8 +292,16 @@ const styles = StyleSheet.create({
   },
   indicatorBorder: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
+    position: 'relative',
+    paddingTop: 10,
+  },
+  dividerLine: {
+    position: 'absolute',
+    height: 2,
+    backgroundColor: '#6D28D9',
+    borderStyle: 'dashed',
   },
   dragHandle: {
     backgroundColor: 'rgba(109, 40, 217, 0.9)',
@@ -300,8 +320,8 @@ const styles = StyleSheet.create({
   zoomWindow: {
     position: 'absolute',
     bottom: 0,
-    left: 20,
-    right: 20,
+    left: 3,
+    right: 3,
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,

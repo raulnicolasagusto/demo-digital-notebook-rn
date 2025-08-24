@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, Alert, TouchableOpacity, Text, Platform } from 'react-native';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { View, StyleSheet, Alert, TouchableOpacity, Text, Platform, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useUser, useAuth } from '@clerk/clerk-expo';
 import { ArrowLeft } from 'lucide-react-native';
@@ -17,6 +17,7 @@ export const NewCanvasScreen: React.FC = () => {
   const router = useRouter();
   const { user } = useUser();
   const { getToken } = useAuth();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   // Canvas state
   const [canvasState, setCanvasState] = useState<CanvasState>({
@@ -38,6 +39,31 @@ export const NewCanvasScreen: React.FC = () => {
   // Canvas dimensions (optimized for mobile and tablet)
   const CANVAS_WIDTH = 400;
   const CANVAS_HEIGHT = 600;
+
+  // Calculate canvas dimensions and position (same logic as CanvasCore)
+  const canvasDimensions = useMemo(() => {
+    const availableWidth = screenWidth - 20; // 10px margin each side
+    const availableHeight = screenHeight - 120; // Space for header and tools
+    
+    const scaleX = availableWidth / CANVAS_WIDTH;
+    const scaleY = availableHeight / CANVAS_HEIGHT;
+    const scale = Math.max(Math.min(scaleX, scaleY), 1.2); // Min 1.2x scale
+    
+    const scaledWidth = CANVAS_WIDTH * scale;
+    const scaledHeight = CANVAS_HEIGHT * scale;
+    
+    // Calculate offset for centering
+    const offsetX = (screenWidth - scaledWidth) / 2;
+    const offsetY = (screenHeight - scaledHeight) / 2;
+    
+    return {
+      width: scaledWidth,
+      height: scaledHeight,
+      scale,
+      offsetX,
+      offsetY
+    };
+  }, [screenWidth, screenHeight]);
 
   // Setup immersive mode for Android
   const setupImmersiveMode = async () => {
@@ -257,6 +283,9 @@ export const NewCanvasScreen: React.FC = () => {
         onPathAdd={handlePathAdd}
         strokeColor="#000000"
         strokeWidth={3}
+        canvasScale={canvasDimensions.scale}
+        canvasOffsetX={canvasDimensions.offsetX}
+        canvasOffsetY={canvasDimensions.offsetY}
       />
 
       {/* Floating Menu */}
