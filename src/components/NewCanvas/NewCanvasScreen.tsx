@@ -35,9 +35,9 @@ export const NewCanvasScreen: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [isLoadingPage, setIsLoadingPage] = useState(false);
 
-  // Canvas dimensions (optimized for tablets)
-  const CANVAS_WIDTH = 1200;
-  const CANVAS_HEIGHT = 1600;
+  // Canvas dimensions (optimized for mobile and tablet)
+  const CANVAS_WIDTH = 400;
+  const CANVAS_HEIGHT = 600;
 
   // Setup immersive mode for Android
   const setupImmersiveMode = async () => {

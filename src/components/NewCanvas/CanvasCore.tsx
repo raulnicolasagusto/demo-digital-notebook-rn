@@ -13,9 +13,9 @@ interface CanvasCoreProps {
   isEnabled?: boolean;
 }
 
-// Canvas dimensions optimized for tablet (iPad Pro 12.9" ratio)
-const CANVAS_WIDTH = 1200;
-const CANVAS_HEIGHT = 1600;
+// Canvas dimensions optimized for mobile and tablet
+const CANVAS_WIDTH = 400;
+const CANVAS_HEIGHT = 600;
 
 export const CanvasCore: React.FC<CanvasCoreProps> = ({
   canvasState,
@@ -34,12 +34,28 @@ export const CanvasCore: React.FC<CanvasCoreProps> = ({
   
   // Calculate canvas scale to fit screen while maintaining aspect ratio
   const canvasDimensions: CanvasDimensions = useMemo(() => {
-    const availableWidth = screenWidth - 40; // 20px margin each side
-    const availableHeight = screenHeight - 160; // Space for header and tools
+    const availableWidth = screenWidth - 20; // 10px margin each side
+    const availableHeight = screenHeight - 120; // Space for header and tools
     
+    // For mobile, we want the canvas to fill the screen
+    // So we calculate what scale would make it fill available space
     const scaleX = availableWidth / CANVAS_WIDTH;
     const scaleY = availableHeight / CANVAS_HEIGHT;
-    const scale = Math.min(scaleX, scaleY); // Remove the 1 limit for mobile
+    
+    // Use min to fit within screen, but ensure minimum scale for visibility
+    const scale = Math.max(Math.min(scaleX, scaleY), 1.2); // Min 1.2x scale for good visibility
+    
+    console.log('Canvas scaling:', {
+      screenWidth,
+      screenHeight,
+      availableWidth,
+      availableHeight,
+      scaleX,
+      scaleY,
+      finalScale: scale,
+      finalWidth: CANVAS_WIDTH * scale,
+      finalHeight: CANVAS_HEIGHT * scale
+    });
     
     return {
       width: CANVAS_WIDTH * scale,

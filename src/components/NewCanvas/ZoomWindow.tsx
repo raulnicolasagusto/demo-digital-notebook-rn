@@ -16,7 +16,7 @@ interface ZoomWindowProps {
 }
 
 const ZOOM_SCALE = 3;
-const ZOOM_WINDOW_HEIGHT = 180;
+const ZOOM_WINDOW_HEIGHT = 300;
 
 export const ZoomWindow: React.FC<ZoomWindowProps> = ({
   isActive,
@@ -30,12 +30,12 @@ export const ZoomWindow: React.FC<ZoomWindowProps> = ({
 }) => {
   const { width: screenWidth } = useWindowDimensions();
   
-  // Movable zoom area
+  // Movable zoom area - adjusted for larger canvas
   const [zoomArea, setZoomArea] = useState({
-    x: 50, // Initial position on screen
-    y: 100,
-    width: 200,
-    height: 150
+    x: 80, // Initial position on screen
+    y: 200,
+    width: 150, // Smaller zoom area for better precision
+    height: 80
   });
 
   // Current drawing state
@@ -67,8 +67,8 @@ export const ZoomWindow: React.FC<ZoomWindowProps> = ({
       const { dx, dy } = gestureState;
       
       // Calculate new position from drag start + delta
-      const newX = Math.max(0, Math.min(screenWidth - 200, dragStartRef.current.x + dx));
-      const newY = Math.max(50, Math.min(500, dragStartRef.current.y + dy));
+      const newX = Math.max(0, Math.min(screenWidth - 150, dragStartRef.current.x + dx));
+      const newY = Math.max(80, Math.min(700, dragStartRef.current.y + dy)); // Expanded range for larger canvas
       
       console.log('Moving to:', newX, newY);
       setZoomArea(prev => ({

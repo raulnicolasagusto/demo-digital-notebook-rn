@@ -3,9 +3,22 @@
     "allow": [
       "WebSearch",
       "Bash(mkdir:*)",
-      "Bash(npm run start:*)"
+      "Bash(npm run start:*)",
+      "Bash(npm search:*)",
+      "Bash(npm install:*)",
+      "Bash(echo $env:APPDATA)",
+      "Bash(dir:*)",
+      "Bash(claude doctor)",
+      "WebFetch(domain:supabase.com)",
+      "Bash(claude mcp)",
+      "Bash(claude mcp:*)",
+      "Bash(where claude)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__list_extensions",
+      "mcp__supabase__list_migrations"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true
 }
